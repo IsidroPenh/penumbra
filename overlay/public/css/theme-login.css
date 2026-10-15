@@ -1,0 +1,158 @@
+/* Penumbra — pantalla de inicio de sesión (escritorio y móvil) */
+:root {
+    --n-bg: #0b0d12;
+    --n-surface: #12151c;
+    --n-border: #262c39;
+    --n-text: #e7eaf0;
+    --n-text-dim: #9aa3b5;
+    --n-accent: #7c6cff;
+    --n-accent-2: #4f8bff;
+
+    color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    min-height: 100%;
+}
+
+body {
+    align-items: center;
+    background:
+        radial-gradient(900px 500px at 15% -10%, rgb(124 108 255 / 22%), transparent 60%),
+        radial-gradient(800px 500px at 110% 110%, rgb(79 139 255 / 16%), transparent 60%),
+        var(--n-bg);
+    color: var(--n-text);
+    display: flex;
+    font-family: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, "Roboto", sans-serif;
+    font-size: 15px;
+    justify-content: center;
+    line-height: 1.5;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 24px 16px;
+    -webkit-font-smoothing: antialiased;
+}
+
+#main {
+    backdrop-filter: blur(12px);
+    background: rgb(18 21 28 / 82%);
+    border: 1px solid var(--n-border);
+    border-radius: 22px;
+    box-shadow: 0 30px 80px rgb(0 0 0 / 50%);
+    display: flex;
+    flex-direction: column;
+    max-width: 380px;
+    padding: 32px 28px 26px;
+    text-align: left;
+    width: 100%;
+}
+
+#main h1 {
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 14px 0 22px;
+    order: 1;
+    text-align: center;
+}
+
+#logo {
+    display: flex;
+    justify-content: center;
+    order: 0;
+}
+
+#logo img {
+    filter: drop-shadow(0 8px 24px rgb(124 108 255 / 45%));
+    height: 64px;
+    width: 64px;
+}
+
+#formplace {
+    order: 2;
+    padding: 0;
+}
+
+.col {
+    display: block;
+}
+
+.row {
+    margin-bottom: 16px;
+}
+
+.row br {
+    display: none;
+}
+
+label {
+    color: var(--n-text-dim);
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+input[type="text"],
+input[type="password"] {
+    background: var(--n-bg);
+    border: 1px solid var(--n-border);
+    border-radius: 12px;
+    color: var(--n-text);
+    font: inherit;
+    font-size: 16px; /* evita el zoom automático en iOS */
+    outline: none;
+    padding: 12px 14px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+    border-color: var(--n-accent);
+    box-shadow: 0 0 0 4px rgb(124 108 255 / 18%);
+}
+
+#loginButton {
+    background: linear-gradient(135deg, var(--n-accent), var(--n-accent-2));
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 10px 26px rgb(124 108 255 / 35%);
+    color: #ffffff;
+    cursor: pointer;
+    float: none;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 6px;
+    padding: 13px;
+    transition: filter 0.15s, transform 0.05s;
+    width: 100%;
+}
+
+#loginButton:hover {
+    filter: brightness(1.08);
+}
+
+#loginButton:active {
+    transform: translateY(1px);
+}
+
+#error_msg {
+    color: #f87171;
+    font-size: 13px;
+    order: 3;
+    text-align: center;
+    white-space: pre-wrap;
+}
+
+#error_msg:not(:empty) {
+    margin-top: 14px;
+}

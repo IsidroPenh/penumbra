@@ -1,0 +1,53 @@
+name: Release
+
+# Publica un .zip listo para usar cada vez que se sube una etiqueta vX.Y.Z,
+# o a mano desde la pestaña Actions eligiendo la versión de qBittorrent.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      qbt_version:
+        description: "Versión de qBittorrent (ej. 5.1.4)"
+        required: true
+        default: "5.1.4"
+
+env:
+  QBT_VERSION: ${{ inputs.qbt_version || '5.1.4' }}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar lrelease
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qt6-l10n-tools
+
+      - name: Construir
+        run: ./build.sh "$QBT_VERSION"
+
+      - name: Empaquetar
+        run: |
+          NAME="penumbra-${GITHUB_REF_NAME}-qbt${QBT_VERSION}"
+          [[ "$GITHUB_REF_TYPE" == "tag" ]] || NAME="penumbra-qbt${QBT_VERSION}"
+          mv dist penumbra
+          zip -qr "$NAME.zip" penumbra
+          echo "ZIP=$NAME.zip" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIP }}
+          path: ${{ env.ZIP }}
+
+      - name: Adjuntar al release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --title "Penumbra $GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" "$ZIP" --clobber

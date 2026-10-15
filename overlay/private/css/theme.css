@@ -1,0 +1,965 @@
+/*
+ * Penumbra — tema oscuro moderno para el WebUI de qBittorrent (escritorio).
+ * Se carga después de las hojas originales y sólo reemplaza la apariencia:
+ * todo el HTML y JavaScript original sigue intacto, así que no se pierde ninguna función.
+ */
+
+/* ---------- Paleta ---------- */
+:root,
+:root.dark,
+:root:not(.dark) {
+    --n-bg: #0b0d12;
+    --n-surface: #12151c;
+    --n-surface-2: #181c25;
+    --n-surface-3: #1f2430;
+    --n-border: #262c39;
+    --n-border-strong: #343b4b;
+    --n-text: #e7eaf0;
+    --n-text-dim: #9aa3b5;
+    --n-text-faint: #6b7385;
+    --n-accent: #7c6cff;
+    --n-accent-2: #4f8bff;
+    --n-accent-soft: rgb(124 108 255 / 16%);
+    --n-accent-softer: rgb(124 108 255 / 9%);
+    --n-green: #34d399;
+    --n-amber: #fbbf24;
+    --n-red: #f87171;
+    --n-cyan: #22d3ee;
+    --n-radius: 10px;
+    --n-radius-sm: 7px;
+    --n-shadow: 0 18px 50px rgb(0 0 0 / 55%), 0 2px 8px rgb(0 0 0 / 35%);
+    --n-font: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, "Roboto", "Helvetica Neue", sans-serif;
+
+    /* Variables originales de qBittorrent remapeadas */
+    --color-accent-blue: var(--n-accent);
+    --color-text-blue: #8fb3ff;
+    --color-text-orange: #b4a9ff;
+    --color-text-red: var(--n-red);
+    --color-text-green: var(--n-green);
+    --color-text-white: #ffffff;
+    --color-text-disabled: var(--n-text-faint);
+    --color-text-default: var(--n-text);
+    --color-background-primary: var(--n-bg);
+    --color-background-blue: var(--n-accent);
+    --color-background-popup: var(--n-surface);
+    --color-background-default: var(--n-surface-2);
+    --color-background-hover: var(--n-surface-3);
+    --color-border-blue: var(--n-accent);
+    --color-border-default: var(--n-border);
+    --color-icon-hover: none;
+
+    color-scheme: dark;
+    accent-color: var(--n-accent);
+}
+
+/* ---------- Base ---------- */
+html,
+body {
+    background-color: var(--n-bg);
+}
+
+body {
+    color: var(--n-text);
+    font-family: var(--n-font);
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+}
+
+body:not(:has(#desktop)) {
+    background-color: var(--n-surface);
+}
+
+a {
+    color: #b4a9ff;
+    transition: color 0.15s;
+}
+
+a:hover {
+    color: #d3ccff;
+}
+
+::selection {
+    background: rgb(124 108 255 / 40%);
+}
+
+* {
+    scrollbar-color: var(--n-border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--n-border-strong);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+h2,
+h3,
+h4 {
+    color: var(--n-text);
+    letter-spacing: 0.01em;
+}
+
+hr {
+    background-color: var(--n-border);
+}
+
+pre {
+    background: var(--n-bg);
+    border-color: var(--n-border);
+    border-radius: var(--n-radius-sm);
+    font-family: ui-monospace, "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+}
+
+/* ---------- Controles de formulario ---------- */
+input[type="search"],
+input[type="text"],
+input[type="number"],
+input[type="password"],
+input[type="url"],
+input[type="email"],
+input[type="time"],
+input:not([type]),
+textarea,
+select {
+    background-color: var(--n-bg);
+    border: 1px solid var(--n-border);
+    border-radius: var(--n-radius-sm);
+    color: var(--n-text);
+    padding: 5px 8px;
+    transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+
+textarea {
+    padding: 8px 10px;
+}
+
+select {
+    padding: 5px 8px;
+}
+
+input:is([type="search"], [type="text"], [type="number"], [type="password"], [type="url"], [type="email"], [type="time"], :not([type])):hover,
+textarea:hover,
+select:hover {
+    border-color: var(--n-border-strong);
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+    border-color: var(--n-accent);
+    box-shadow: 0 0 0 3px var(--n-accent-soft);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+    opacity: 0.5;
+}
+
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+button {
+    background: var(--n-surface-3);
+    border: 1px solid var(--n-border-strong);
+    border-radius: var(--n-radius-sm);
+    color: var(--n-text);
+    font-weight: 500;
+    padding: 5px 14px;
+    transition: background-color 0.15s, border-color 0.15s, transform 0.05s;
+}
+
+input[type="button"]:hover,
+input[type="submit"]:hover,
+input[type="reset"]:hover,
+button:hover:not(:disabled) {
+    background: #2a3040;
+    border-color: #444c60;
+}
+
+input[type="button"]:active,
+input[type="submit"]:active,
+button:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+input[type="submit"],
+#loginButton,
+.modalDialog input[type="button"]:last-child,
+#applyButton,
+#confirmBtn,
+#submitButton {
+    background: linear-gradient(135deg, var(--n-accent), var(--n-accent-2));
+    border-color: transparent;
+    color: #ffffff;
+}
+
+input[type="submit"]:hover,
+#applyButton:hover,
+#confirmBtn:hover,
+#submitButton:hover {
+    background: linear-gradient(135deg, #8d7fff, #6399ff);
+    border-color: transparent;
+    filter: brightness(1.05);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    accent-color: var(--n-accent);
+    height: 14px;
+    width: 14px;
+}
+
+fieldset,
+fieldset.settings {
+    background: var(--n-surface-2);
+    border: 1px solid var(--n-border);
+    border-radius: var(--n-radius);
+    margin: 0 2px 10px;
+    padding: 8px 12px 10px;
+}
+
+fieldset.settings legend,
+fieldset legend {
+    color: var(--n-text);
+    font-weight: 600;
+    padding: 2px 8px;
+}
+
+/* ---------- Barra de menú superior ---------- */
+#desktopHeader {
+    background: var(--n-surface);
+    border-bottom: 1px solid var(--n-border);
+}
+
+#desktopNavbar {
+    background: transparent;
+    display: flow-root;
+    overflow: visible;
+    padding: 4px 6px 0;
+}
+
+#desktopNavbar ul {
+    font-size: 13px;
+}
+
+#desktopNavbar > ul > li > a {
+    border-radius: var(--n-radius-sm);
+    color: var(--n-text-dim);
+    padding: 5px 11px;
+}
+
+#desktopNavbar > ul > li > a:hover,
+#desktopNavbar > ul > li:hover > a {
+    background: var(--n-surface-3);
+    color: var(--n-text);
+}
+
+#desktopNavbar li ul {
+    background: var(--n-surface-2);
+    border: 1px solid var(--n-border-strong);
+    border-radius: var(--n-radius);
+    box-shadow: var(--n-shadow);
+    margin-top: 2px;
+    padding: 5px;
+}
+
+#desktopNavbar li ul li a {
+    border-radius: var(--n-radius-sm);
+    color: var(--n-text);
+    padding: 6px 14px 6px 30px;
+}
+
+#desktopNavbar li ul li a:hover,
+#desktopNavbar ul li a:hover {
+    background: var(--n-accent-soft);
+    color: #ffffff;
+}
+
+li.divider {
+    border-top: 1px solid var(--n-border);
+    margin-top: 4px;
+    padding-top: 4px;
+}
+
+.MyMenuIcon {
+    margin: 0 8px -3px -20px;
+}
+
+/* ---------- Barra de herramientas ---------- */
+#mochaToolbar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-top: 0;
+    padding: 6px 10px 8px;
+}
+
+#mochaToolbar > a,
+#queueingButtons > a {
+    align-items: center;
+    border-radius: var(--n-radius-sm);
+    display: inline-flex;
+    height: 34px;
+    justify-content: center;
+    transition: background-color 0.15s;
+    width: 36px;
+}
+
+#queueingButtons {
+    display: inline-flex;
+    gap: 2px;
+}
+
+#mochaToolbar > a:hover,
+#queueingButtons > a:hover {
+    background: var(--n-surface-3);
+}
+
+.mochaToolButton {
+    height: 20px;
+    margin: 0;
+    width: 20px;
+}
+
+#mochaToolbar .divider {
+    background: none;
+    margin-left: 12px;
+    padding: 0;
+    position: relative;
+}
+
+#mochaToolbar .divider::before {
+    background: var(--n-border-strong);
+    content: "";
+    height: 20px;
+    left: -7px;
+    position: absolute;
+    top: 7px;
+    width: 1px;
+}
+
+/* Pestañas principales (Transferencias / Buscar / RSS / Registro) */
+#mainWindowTabs {
+    float: none;
+    margin: 0 0 0 auto;
+    order: 10;
+}
+
+.tab-menu {
+    background: var(--n-bg);
+    border: 1px solid var(--n-border);
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 12.5px;
+    gap: 2px;
+    padding: 3px;
+}
+
+.tab-menu li a,
+.tab-menu li:first-child a {
+    background: transparent;
+    border-radius: 999px;
+    color: var(--n-text-dim);
+    font-weight: 500;
+    margin: 0;
+    padding: 5px 13px;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.tab-menu li:hover a {
+    background: var(--n-surface-3);
+    color: var(--n-text);
+}
+
+.tab-menu li.selected a {
+    background: linear-gradient(135deg, var(--n-accent), var(--n-accent-2));
+    box-shadow: 0 2px 10px rgb(124 108 255 / 35%);
+    color: #ffffff;
+}
+
+#propertiesTabs.tab-menu {
+    background: transparent;
+    border: 0;
+    font-size: 12px;
+    margin: 2px 0 0 4px;
+    padding: 0 2px;
+}
+
+#propertiesTabs.tab-menu li a {
+    line-height: 18px;
+    padding: 2px 11px;
+}
+
+#propertiesTabs.tab-menu li.selected a {
+    box-shadow: none;
+}
+
+/* Filtro de la lista de torrents */
+#torrentsFilterToolbar {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+    margin-left: 14px;
+}
+
+#torrentsFilterInput {
+    background-color: var(--n-bg);
+    background-position: 9px center;
+    background-size: 15px;
+    border-radius: 999px;
+    min-width: 230px;
+    padding: 6px 12px 6px 32px;
+}
+
+#torrentsFilterRegexBox + label,
+#torrentsFilterRegexBox:checked + label {
+    background-color: var(--n-bg);
+    background-size: 16px;
+    border-radius: var(--n-radius-sm);
+    height: 30px;
+    margin: 0;
+    width: 30px;
+}
+
+#torrentsFilterRegexBox:checked + label {
+    background-color: var(--n-accent-soft);
+    border-color: var(--n-accent);
+}
+
+#torrentsFilterSelect {
+    border-radius: 999px;
+}
+
+/* ---------- Paneles y columnas ---------- */
+#desktop {
+    background: var(--n-bg);
+}
+
+#pageWrapper {
+    border-color: var(--n-border);
+}
+
+.panel,
+.panel-header {
+    border-color: var(--n-border);
+}
+
+.panel-header {
+    background: var(--n-surface);
+}
+
+.panel-header h2 {
+    color: var(--n-text-dim);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+#propertiesPanel_header,
+#properties {
+    background: var(--n-surface);
+}
+
+.columnHandle {
+    background: var(--n-surface) none;
+    border-color: var(--n-border);
+    position: relative;
+    transition: background-color 0.15s;
+    width: 6px;
+}
+
+.columnHandle:hover,
+.horizontalHandle:hover {
+    background-color: var(--n-accent-soft);
+}
+
+.horizontalHandle {
+    background: var(--n-surface);
+    border-bottom: 1px solid var(--n-border);
+    border-top: 1px solid var(--n-border);
+    height: 5px;
+}
+
+.horizontalHandle .handleIcon {
+    background: none;
+}
+
+.iconWrapper:hover {
+    background: var(--n-surface-3);
+    border-color: var(--n-border-strong);
+    border-radius: var(--n-radius-sm);
+}
+
+/* Barra lateral de filtros */
+#Filters,
+#filtersColumn,
+#Filters_pad {
+    background: var(--n-surface);
+}
+
+.filterTitle {
+    color: var(--n-text-faint);
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    margin-top: 8px;
+    padding: 6px 10px 4px;
+}
+
+.filterTitle img {
+    opacity: 0.6;
+}
+
+ul.filterList {
+    padding: 0 6px;
+}
+
+ul.filterList span.link {
+    border-radius: var(--n-radius-sm);
+    color: var(--n-text-dim);
+    margin: 1px 0;
+    padding: 5px 9px;
+    transition: background-color 0.12s, color 0.12s;
+}
+
+ul.filterList span.link:hover {
+    background: var(--n-surface-3);
+    color: var(--n-text);
+}
+
+.selectedFilter > span.link,
+ul.filterList .selectedFilter > span.link {
+    background: var(--n-accent-soft);
+    box-shadow: inset 2px 0 0 var(--n-accent);
+    color: #ffffff;
+}
+
+/* ---------- Tablas ---------- */
+.dynamicTableFixedHeaderDiv,
+#torrentsTableFixedHeaderDiv,
+#propertiesPanel .dynamicTableFixedHeaderDiv {
+    background: var(--n-surface);
+    border-color: var(--n-border);
+}
+
+.dynamicTable th {
+    border-right: 1px solid var(--n-border);
+    color: var(--n-text-dim);
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 7px 6px;
+}
+
+.dynamicTable th:hover {
+    color: var(--n-text);
+}
+
+.dynamicTable th.sorted {
+    color: #c7beff;
+}
+
+.dynamicTable td,
+#transferList .dynamicTable td {
+    border-bottom: 1px solid rgb(38 44 57 / 55%);
+    padding: 5px 6px;
+}
+
+.altRowColors tbody tr:nth-child(odd of :not(.invisible)) {
+    background-color: rgb(255 255 255 / 1.8%);
+}
+
+.dynamicTableDiv table.dynamicTable tbody tr:hover,
+#torrentFilesTableDiv .dynamicTable tr.nonAlt:hover {
+    background-color: rgb(255 255 255 / 4.5%);
+    color: var(--n-text);
+}
+
+.dynamicTableDiv table.dynamicTable tbody tr.selected {
+    background-color: var(--n-accent-soft);
+    box-shadow: inset 3px 0 0 var(--n-accent);
+    color: #ffffff;
+}
+
+.dynamicTableDiv table.dynamicTable tbody tr.selected:hover {
+    background-color: rgb(124 108 255 / 22%);
+}
+
+/* Barras de progreso */
+.progressbar_wrapper {
+    background: var(--n-bg);
+    border: 0 !important;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progressbar_dark {
+    background: linear-gradient(90deg, var(--n-accent), var(--n-accent-2)) !important;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.progressbar_light {
+    background: var(--n-surface-3) !important;
+    color: var(--n-text-dim) !important;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ---------- Menús contextuales ---------- */
+.contextMenu,
+.contextMenu li ul {
+    background: var(--n-surface-2);
+    border: 1px solid var(--n-border-strong);
+    border-radius: var(--n-radius);
+    box-shadow: var(--n-shadow);
+    padding: 5px;
+}
+
+.contextMenu li ul {
+    margin: -34px 0 0 calc(100% + 4px);
+}
+
+.contextMenu li a {
+    border-radius: var(--n-radius-sm);
+    color: var(--n-text);
+    padding: 6px 26px 6px 8px;
+}
+
+.contextMenu li a:hover {
+    background: var(--n-accent-soft);
+    color: #ffffff;
+}
+
+.contextMenu .separator {
+    border-top: 1px solid var(--n-border);
+    margin-top: 4px;
+    padding-top: 4px;
+}
+
+.contextMenu .separatorBottom {
+    border-bottom: 1px solid var(--n-border);
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+}
+
+#contextCategoryList img.highlightedCategoryIcon {
+    background-color: var(--n-accent-soft);
+    border-radius: 4px;
+}
+
+/* ---------- Ventanas (diálogos MochaUI) ---------- */
+.mocha {
+    background-color: var(--n-surface);
+}
+
+.mochaTitlebar {
+    background-color: var(--n-surface-2);
+}
+
+.mochaTitlebar h3 {
+    color: var(--n-text);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px 5px 14px;
+}
+
+.mochaToolbarWrapper,
+.mochaContentWrapper {
+    background-color: var(--n-surface);
+}
+
+.mochaToolbar,
+.mochaContentBorder,
+div.mochaToolbarWrapper.bottom {
+    border-color: var(--n-border);
+}
+
+.mochaMinimizeButton,
+.mochaMaximizeButton,
+.mochaCloseButton {
+    background-color: var(--n-surface-3);
+    color: var(--n-text-dim);
+}
+
+.mocha .cornerSE {
+    background-color: var(--n-surface-2);
+}
+
+#modalOverlay {
+    backdrop-filter: blur(3px);
+    background: rgb(4 5 8 / 60%);
+}
+
+#windowUnderlay {
+    background: var(--n-bg);
+}
+
+.mocha.notification {
+    background: var(--n-surface-2);
+}
+
+#about_contentWrapper {
+    background-color: var(--n-surface);
+}
+
+/* Preferencias */
+#preferencesToolbar,
+#prefTabs {
+    background: var(--n-surface);
+}
+
+#mochaPage h3 {
+    border-color: var(--n-border);
+    color: var(--n-text);
+    font-size: 13px;
+}
+
+#watched_folders_tab td,
+#watched_folders_tab th {
+    border-color: var(--n-border);
+}
+
+.select-watched-folder-editable {
+    border-color: var(--n-border);
+    border-radius: var(--n-radius-sm);
+}
+
+/* Estadísticas */
+#statisticsContent table {
+    background-color: var(--n-surface-2);
+    border: 1px solid var(--n-border);
+    border-radius: var(--n-radius);
+    padding: 8px 12px;
+}
+
+/* ---------- Barra de estado ---------- */
+#desktopFooterWrapper {
+    background: var(--n-surface);
+    border-top: 1px solid var(--n-border);
+}
+
+#desktopFooter {
+    color: var(--n-text-dim);
+    font-family: var(--n-font);
+    font-size: 12px;
+    padding: 3px 4px;
+}
+
+#desktopFooter td {
+    vertical-align: middle;
+}
+
+td.statusBarSeparator {
+    background: none;
+    position: relative;
+    width: 18px;
+}
+
+td.statusBarSeparator::after {
+    background: var(--n-border-strong);
+    content: "";
+    height: 14px;
+    left: 8px;
+    position: absolute;
+    top: calc(50% - 7px);
+    width: 1px;
+}
+
+td.speedLabel {
+    color: var(--n-text);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Varios ---------- */
+#searchResults .numSearchResults {
+    color: var(--n-text-dim);
+}
+
+.combo_priority {
+    border-radius: var(--n-radius-sm);
+}
+
+label.tristate {
+    filter: invert(0.88) hue-rotate(180deg);
+}
+
+.sliderarea {
+    background: var(--n-surface-3);
+    border: 1px solid var(--n-border-strong);
+    border-radius: 999px;
+}
+
+.sliderknob {
+    filter: invert(0.85) hue-rotate(180deg);
+}
+
+.vsb-main > button {
+    background: var(--n-bg) !important;
+    border-color: var(--n-border) !important;
+    border-radius: var(--n-radius-sm) !important;
+    color: var(--n-text) !important;
+}
+
+.vsb-menu {
+    background: var(--n-surface-2) !important;
+    border-color: var(--n-border-strong) !important;
+    border-radius: var(--n-radius) !important;
+    box-shadow: var(--n-shadow);
+}
+
+.vsb-menu li:hover {
+    background: var(--n-accent-soft) !important;
+}
+
+.tree li a {
+    color: var(--n-text) !important;
+}
+
+/* Logo sutil al iniciar */
+#desktopNavbar > ul::before {
+    background: url("../images/qbittorrent-tray.svg") center / 18px no-repeat;
+    content: "";
+    display: block;
+    float: left;
+    height: 28px;
+    margin-right: 4px;
+    width: 26px;
+}
+
+/* ---------- Iconos monocromáticos ---------- */
+:root {
+    --n-icon: brightness(0) invert(0.86);
+    --n-icon-strong: brightness(0) invert(1);
+}
+
+img:not(.flags, [src*="qbittorrent"], [src*="mascot"], [src*="spinner"], [src*="penumbra"]),
+.categoryToggle,
+.filesTableCollapseIcon {
+    filter: var(--n-icon);
+}
+
+#desktopNavbar a:hover img,
+.contextMenu li a:hover img,
+.tab-menu li:hover img,
+.tab-menu li.selected img,
+ul.filterList span.link:hover img,
+ul.filterList .selectedFilter > .link img,
+.dynamicTable tr:is(:hover, .selected) img:not(.flags),
+#mochaToolbar > a:hover img,
+#queueingButtons > a:hover img {
+    filter: var(--n-icon-strong);
+}
+
+/* Íconos dibujados como fondo (filtro de texto, regex, estados de la lista) */
+#torrentsFilterInput,
+#torrentFilesFilterInput {
+    background-image: none !important;
+}
+
+#torrentsFilterToolbar {
+    position: relative;
+}
+
+#torrentsFilterToolbar::before {
+    background: url("../images/edit-find.svg") center / 15px no-repeat;
+    content: "";
+    filter: var(--n-icon);
+    height: 16px;
+    left: 10px;
+    pointer-events: none;
+    position: absolute;
+    top: calc(50% - 8px);
+    width: 16px;
+    z-index: 1;
+}
+
+
+#torrentsFilterRegexBox + label,
+#torrentsFilterRegexBox:checked + label {
+    background-image: none !important;
+    position: relative;
+}
+
+#torrentsFilterRegexBox + label::before {
+    background: url("../images/regex.svg") center / 16px no-repeat;
+    content: "";
+    filter: var(--n-icon);
+    inset: 0;
+    position: absolute;
+}
+
+#torrentsFilterRegexBox:checked + label::before {
+    filter: var(--n-icon-strong);
+}
+
+/* Pestañas del panel inferior: altura fija y centradas para que la píldora nunca se recorte */
+#propertiesPanel_header .panel-headerContent {
+    padding-top: 0;
+}
+
+#propertiesPanel_header .toolbarTabs {
+    align-items: center;
+    display: flex;
+    height: 27px;
+}
+
+#propertiesTabs.tab-menu {
+    align-items: center;
+    margin: 0 0 0 4px;
+    padding: 0 2px;
+}
+
+#propertiesTabs.tab-menu li a {
+    box-sizing: border-box;
+    height: 21px;
+    line-height: 1;
+    padding: 0 11px;
+}
+
+#propertiesTabs.tab-menu li a img {
+    height: 14px;
+    width: 14px;
+}
+
+/* Fila de filtros del buscador: altura suficiente para los controles del tema */
+#searchResultsFilters:not(.invisible) {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 0;
+    height: auto;
+    min-height: 44px;
+    overflow: visible;
+    padding: 6px 0;
+}
+
+#searchResultsFilters :is(input, select) {
+    padding-bottom: 3px;
+    padding-top: 3px;
+}
+
+#searchResultsFilters label {
+    white-space: nowrap;
+}
+
+/* Lupas dentro de los campos de búsqueda en el mismo tono que el resto de los íconos */
+#searchPattern,
+#filterTextInput,
+#torrentFilesFilterInput {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23dbdbdb' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") !important;
+    background-position: 9px center !important;
+    background-size: 14px !important;
+    padding-left: 30px !important;
+}

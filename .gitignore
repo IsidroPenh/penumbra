@@ -1,0 +1,8 @@
+# Generado por build.sh
+/dist/
+/.cache/
+/.venv/
+*.zip
+
+# Logs que qBittorrent deja con rutas de Windows
+/C:*
