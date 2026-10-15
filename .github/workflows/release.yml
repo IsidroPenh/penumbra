@@ -1,14 +1,14 @@
 name: Release
 
-# Publica un .zip listo para usar cada vez que se sube una etiqueta vX.Y.Z,
-# o a mano desde la pestaña Actions eligiendo la versión de qBittorrent.
+# Publishes a ready-to-use .zip whenever a vX.Y.Z tag is pushed,
+# or manually from the Actions tab for any qBittorrent version.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
       qbt_version:
-        description: "Versión de qBittorrent (ej. 5.1.4)"
+        description: "qBittorrent version (e.g. 5.1.4)"
         required: true
         default: "5.1.4"
 
@@ -24,13 +24,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Instalar lrelease
+      - name: Install lrelease
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qt6-l10n-tools
 
-      - name: Construir
+      - name: Build
         run: ./build.sh "$QBT_VERSION"
 
-      - name: Empaquetar
+      - name: Package
         run: |
           NAME="penumbra-${GITHUB_REF_NAME}-qbt${QBT_VERSION}"
           [[ "$GITHUB_REF_TYPE" == "tag" ]] || NAME="penumbra-qbt${QBT_VERSION}"
@@ -43,7 +43,7 @@ jobs:
           name: ${{ env.ZIP }}
           path: ${{ env.ZIP }}
 
-      - name: Adjuntar al release
+      - name: Attach to release
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}

@@ -1,122 +1,103 @@
 <h1 align="center">Penumbra</h1>
 
 <p align="center">
-  <b>Tema oscuro para el WebUI de qBittorrent, optimizado para escritorio y para el celular.</b><br>
-  <sub><a href="#english">English below</a></sub>
+  <b>A dark theme for the qBittorrent WebUI, optimized for both desktop and mobile.</b>
 </p>
 
 <p align="center">
-  <img src="capturas/escritorio.png" alt="Penumbra en escritorio" width="68%">
+  <img src="capturas/escritorio.png" alt="Penumbra on desktop" width="68%">
   &nbsp;
-  <img src="capturas/movil-lista.png" alt="Penumbra en el celular" width="22%">
+  <img src="capturas/movil-lista.png" alt="Penumbra on a phone" width="22%">
 </p>
 
-Penumbra es un WebUI alternativo para [qBittorrent](https://www.qbittorrent.org/) con dos interfaces:
+Penumbra is an alternative WebUI for [qBittorrent](https://www.qbittorrent.org/) with two interfaces:
 
-- 🖥️ **Escritorio:** el WebUI oficial completo, con preferencias, RSS, buscador, registro, estadísticas y
-  menús contextuales, más una capa visual oscura y moderna. Penumbra no toca el JavaScript original, solo
-  agrega estilos, así que no se pierde ninguna función.
-- 📱 **Celular:** si entras desde un teléfono, se abre sola una **app pensada para pantallas táctiles**:
-  tarjetas, gestos, hojas deslizables y barra de navegación inferior. Se puede **instalar en la pantalla de
-  inicio** y queda como una app más (PWA).
-- 🌐 **Idioma:** el escritorio usa las traducciones oficiales de qBittorrent, así que sale en tu idioma.
-  La interfaz móvil está en español.
-- 🪶 **Sin dependencias:** solo HTML, CSS y JavaScript. Usa la misma API que el WebUI oficial.
+- 🖥️ **Desktop:** the full official WebUI, with preferences, RSS, search, log, statistics and context
+  menus, plus a modern dark skin. Penumbra adds styles only and never changes the original JavaScript,
+  so every feature keeps working.
+- 📱 **Mobile:** phones automatically get a **dedicated touch-first app** with cards, gestures, bottom sheets
+  and a bottom navigation bar. It can be **installed to the home screen** and works like a regular app (PWA).
+- 🌐 **Language:** the desktop UI uses qBittorrent's official translations, so it shows up in your language.
+  The mobile UI is currently in Spanish.
+- 🪶 **No dependencies:** plain HTML, CSS and JavaScript, using the same API as the official WebUI.
 
-## Capturas
+## Screenshots
 
-| Lista | Detalle | Archivos | Selección múltiple | Agregar | Más |
+| List | Details | Files | Multi-select | Add | More |
 |:-:|:-:|:-:|:-:|:-:|:-:|
 | <img src="capturas/movil-lista.png" width="140"> | <img src="capturas/movil-detalle.png" width="140"> | <img src="capturas/movil-archivos.png" width="140"> | <img src="capturas/movil-seleccion.png" width="140"> | <img src="capturas/movil-agregar.png" width="140"> | <img src="capturas/movil-mas.png" width="140"> |
 
-<p align="center"><img src="capturas/login.png" alt="Inicio de sesión" width="60%"></p>
+<p align="center"><img src="capturas/login.png" alt="Login screen" width="60%"></p>
 
-## Instalación
+## Installation
 
-1. Descarga el `.zip` de la última versión en [**Releases**](../../releases). El nombre del archivo indica
-   para qué versión de qBittorrent está hecho, por ejemplo `qbt5.1.4`.
-2. Descomprímelo en el equipo donde corre qBittorrent. Queda una carpeta `penumbra/`.
-3. En qBittorrent ve a **Herramientas → Opciones → Interfaz web**, marca **Usar interfaz web alternativa**
-   y elige la carpeta `penumbra`.
-4. Abre `http://IP-DEL-SERVIDOR:8080` (o el puerto que uses) desde la PC o desde el celular.
+1. Download the `.zip` from the latest [**release**](../../releases). The file name says which qBittorrent
+   version it was built for, for example `qbt5.1.4`.
+2. Extract it on the machine that runs qBittorrent. You get a `penumbra/` folder.
+3. In qBittorrent, open **Tools → Options → Web UI**, check **Use alternative WebUI** and select the
+   `penumbra` folder.
+4. Open `http://SERVER-IP:8080` (or whatever port you use) from your computer or your phone.
 
-Si usas `qbittorrent-nox` sin interfaz gráfica, puedes activarlo por la API:
+On headless `qbittorrent-nox`, you can enable it through the API:
 
 ```bash
 curl -s http://127.0.0.1:8080/api/v2/app/setPreferences \
-  --data-urlencode 'json={"alternative_webui_enabled":true,"alternative_webui_path":"/ruta/a/penumbra"}'
+  --data-urlencode 'json={"alternative_webui_enabled":true,"alternative_webui_path":"/path/to/penumbra"}'
 ```
 
-### Volver al WebUI original
+### Going back to the original WebUI
 
-Desmarca la opción en **Herramientas → Opciones → Interfaz web**, o:
+Uncheck the option in **Tools → Options → Web UI**, or run:
 
 ```bash
 curl -s http://127.0.0.1:8080/api/v2/app/setPreferences \
   --data-urlencode 'json={"alternative_webui_enabled":false}'
 ```
 
-Si el WebUI no carga, cierra qBittorrent y pon `WebUI\AlternativeUIEnabled=false` en
-`qBittorrent.conf` (en Linux está en `~/.config/qBittorrent/`).
+If the WebUI doesn't load at all, quit qBittorrent and set `WebUI\AlternativeUIEnabled=false` in
+`qBittorrent.conf` (on Linux it lives in `~/.config/qBittorrent/`).
 
-## Uso en el celular
+## Using it on your phone
 
-- Entra a la dirección de tu qBittorrent y se abre la interfaz móvil.
-- Para usarla como app: en el menú del navegador elige **Agregar a pantalla de inicio**.
-- **Toque** en una tarjeta: abre los detalles (Info, Archivos, Trackers, Pares).
-- **Pulsación larga:** activa la selección múltiple para iniciar, detener, cambiar categoría, eliminar y más.
-- **▶ / ⏸** en cada tarjeta: inicia o detiene al instante.
-- **+**: agrega enlaces magnet, URLs o archivos `.torrent`.
-- **Caracol:** activa los límites alternativos de velocidad. Si tocas las velocidades, cambias los límites globales.
-- **Más → Versión escritorio** abre el WebUI completo desde el teléfono. Desde el escritorio,
-  **Ver → Interfaz móvil** vuelve a la app móvil.
-- `mobile.html?add=magnet:?xt=...` abre el formulario de agregar con el enlace ya puesto.
+- Open your qBittorrent address and the mobile app loads automatically.
+- To use it as an app, choose **Add to Home screen** from your browser menu.
+- **Tap** a card to open its details (Info, Files, Trackers, Peers).
+- **Long-press** to start multi-select, then start, stop, change category, delete and more.
+- **▶ / ⏸** on each card starts or stops it instantly.
+- **+** adds magnet links, URLs or `.torrent` files.
+- The **snail** icon toggles the alternative speed limits. Tap the speeds to change the global limits.
+- **Más → Versión escritorio** (More → Desktop version) opens the full WebUI from your phone. On desktop,
+  **View → Interfaz móvil** (Mobile interface) takes you back to the mobile app.
+- `mobile.html?add=magnet:?xt=...` opens the add form with the link already filled in.
 
-## Otra versión de qBittorrent
+## Other qBittorrent versions
 
-Cada `.zip` incluye el WebUI oficial de una versión concreta de qBittorrent. Si tienes otra versión, constrúyelo tú:
+Each `.zip` bundles the official WebUI of one specific qBittorrent version. If you run a different version,
+build it yourself:
 
 ```bash
 git clone https://github.com/IsidroPenh/penumbra.git
 cd penumbra
-./build.sh 5.1.4        # sin argumento detecta la versión de qbittorrent-nox
+./build.sh 5.1.4        # with no argument it detects the qbittorrent-nox version
 ```
 
-El resultado queda en `dist/`; esa es la carpeta que tienes que elegir en qBittorrent. Para que el escritorio
-salga en tu idioma, `build.sh` necesita `lrelease` (paquete `qt6-l10n-tools` en Debian/Ubuntu). Si no lo
-encuentra, intenta instalarlo con `pip` en un `.venv`.
+The output goes to `dist/`. Point qBittorrent at that folder. To get the desktop UI in your language,
+`build.sh` needs `lrelease` (the `qt6-l10n-tools` package on Debian/Ubuntu). If it can't find it, it tries
+to install it with `pip` into a `.venv`.
 
-### Cómo está hecho
+### Project layout
 
 ```
-build.sh                    descarga el WebUI oficial, compila traducciones y aplica el tema
-overlay/                    los archivos del tema (lo único que hay que editar)
-  private/css/theme.css       tema oscuro del escritorio
-  private/scripts/theme.js    redirección automática a la interfaz móvil
-  public/css/theme-login.css  pantalla de inicio de sesión
-  public/mobile.html          interfaz móvil
-  public/m/                   app.js, app.css, íconos y manifest (instalable)
+build.sh                    downloads the official WebUI, compiles translations and applies the theme
+overlay/                    the theme files (the only thing you need to edit)
+  private/css/theme.css       desktop dark theme
+  private/scripts/theme.js    automatic redirect to the mobile UI
+  public/css/theme-login.css  login screen
+  public/mobile.html          mobile UI
+  public/m/                   app.js, app.css, icons and manifest (installable)
 ```
 
-## Licencia
+## License
 
-[GPL-3.0-or-later](LICENSE). Penumbra se distribuye junto con el WebUI oficial de qBittorrent, que tiene
-licencia GPL-2.0-or-later y MIT. No es un proyecto oficial de qBittorrent.
-
----
-
-<a id="english"></a>
-
-## English
-
-**Penumbra** is a dark alternative WebUI for qBittorrent, **optimized for both desktop and mobile**.
-
-- **Desktop:** the full official WebUI with a modern dark skin on top. No original JavaScript is changed, so every feature still works.
-- **Mobile:** phones are automatically sent to a dedicated touch-first app (cards, long-press multi-select,
-  bottom sheets) that can be **installed to the home screen** as a PWA. The mobile UI is in Spanish.
-
-**Install:** download the `.zip` from [Releases](../../releases) that matches your qBittorrent version and extract it.
-Then go to *Tools → Options → Web UI → Use alternative WebUI* and select the `penumbra` folder.
-For other versions, run `./build.sh <version>` and point qBittorrent to `dist/`.
-
-License: GPL-3.0-or-later.
+[GPL-3.0-or-later](LICENSE). Penumbra ships with the official qBittorrent WebUI, which is licensed under
+GPL-2.0-or-later and MIT. This is not an official qBittorrent project.
