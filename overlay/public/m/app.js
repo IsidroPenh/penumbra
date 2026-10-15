@@ -30,6 +30,14 @@
         }
     };
 
+    // Idioma: el de qBittorrent (lo inyecta en <html lang>), o el del navegador si no está disponible
+    const htmlLang = document.documentElement.lang || "";
+    const LANG = (/^[a-z]{2}$/i.test(htmlLang) ? htmlLang : (navigator.language || "en")).slice(0, 2).toLowerCase();
+    const LOCALE = LANG;
+    const DICT = (window.PENUMBRA_I18N || {})[LANG] || {};
+    // T("English text {0}", value): devuelve la traducción, o el texto en inglés. "§contexto" desambigua claves iguales.
+    const T = (s, ...a) => (DICT[s] ?? s.replace(/§.*$/, "")).replace(/\{(\d)\}/g, (m, i) => ((a[i] === undefined) ? m : a[i]));
+
     const $ = (s, r = document) => r.querySelector(s);
     const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" };
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ESC[c]);
@@ -54,7 +62,7 @@
 
     const NF = {};
     const nf = (n, d = 0) => {
-        NF[d] ??= new Intl.NumberFormat("es", { minimumFractionDigits: d, maximumFractionDigits: d });
+        NF[d] ??= new Intl.NumberFormat(LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d });
         return NF[d].format(n);
     };
     const UNITS = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
@@ -70,7 +78,7 @@
         return `${nf(b, d)} ${UNITS[i]}`;
     };
     const fmtSpeed = (b) => ((b < 0) ? "—" : `${fmtBytes(b || 0)}/s`);
-    const fmtLimit = (b) => ((b > 0) ? fmtSpeed(b) : "Sin límite");
+    const fmtLimit = (b) => ((b > 0) ? fmtSpeed(b) : T("No limit"));
     const fmtPct = (p) => {
         const v = p * 100;
         if (v >= 100)
@@ -83,7 +91,7 @@
         if (s >= 8640000)
             return "∞";
         s = Math.round(s);
-        const units = [["a", 31536000], ["d", 86400], ["h", 3600], ["min", 60], ["s", 1]];
+        const units = [[T("y"), 31536000], ["d", 86400], ["h", 3600], ["min", 60], ["s", 1]];
         const out = [];
         for (const [u, n] of units) {
             if ((s >= n) || ((u === "s") && (out.length === 0))) {
@@ -98,7 +106,7 @@
     const fmtDate = (ts) => {
         if (!ts || (ts < 0) || (ts >= 4294967295))
             return "—";
-        return new Date(ts * 1000).toLocaleString("es", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+        return new Date(ts * 1000).toLocaleString(LOCALE, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
     };
     const fmtRatio = (r) => (((r === undefined) || (r < 0)) ? "—" : ((r >= 9999) ? "∞" : nf(r, 2)));
     const flag = (cc) => {
@@ -121,7 +129,7 @@
         return (doc.body.textContent || "").replace(/\n{3,}/g, "\n\n").trim();
     };
 
-    const copyText = async (text, what = "Copiado") => {
+    const copyText = async (text, what = T("Copied")) => {
         let ok = false;
         try {
             if (navigator.clipboard && window.isSecureContext) {
@@ -144,7 +152,7 @@
             catch {}
             ta.remove();
         }
-        toast(ok ? what : "No se pudo copiar", ok ? "ok" : "err");
+        toast(ok ? what : T("Could not copy"), ok ? "ok" : "err");
     };
 
     // =====================================================================
@@ -245,11 +253,11 @@
                 r = await fetch(url, opt);
             }
             catch (e) {
-                throw new HttpError(0, "Sin conexión");
+                throw new HttpError(0, T("No connection"));
             }
             if ((r.status === 403) && !path.startsWith("auth/")) {
                 onForbidden();
-                throw new HttpError(403, "Sesión expirada");
+                throw new HttpError(403, T("Session expired"));
             }
             if (!r.ok) {
                 const t = await r.text().catch(() => "");
@@ -312,27 +320,27 @@
     // Estados de torrent y filtros
     // =====================================================================
     const STATE = {
-        downloading: ["Descargando", "s-dl"],
-        forcedDL: ["Descargando · forzado", "s-dl"],
-        metaDL: ["Obteniendo metadatos", "s-dl"],
-        forcedMetaDL: ["Obteniendo metadatos", "s-dl"],
-        stalledDL: ["Esperando pares", "s-stall"],
-        uploading: ["Sembrando", "s-up"],
-        forcedUP: ["Sembrando · forzado", "s-up"],
-        stalledUP: ["Sembrando · sin pares", "s-stallup"],
-        queuedDL: ["En cola", "s-queue"],
-        queuedUP: ["En cola · siembra", "s-queue"],
-        checkingDL: ["Comprobando", "s-check"],
-        checkingUP: ["Comprobando", "s-check"],
-        checkingResumeData: ["Comprobando datos", "s-check"],
-        queuedForChecking: ["En cola para comprobar", "s-check"],
-        allocating: ["Reservando espacio", "s-check"],
-        moving: ["Moviendo", "s-check"],
-        stoppedDL: ["Detenido", "s-stop"],
-        stoppedUP: ["Completado", "s-done"],
+        downloading: [T("Downloading"), "s-dl"],
+        forcedDL: [T("Downloading · forced"), "s-dl"],
+        metaDL: [T("Fetching metadata"), "s-dl"],
+        forcedMetaDL: [T("Fetching metadata"), "s-dl"],
+        stalledDL: [T("Waiting for peers"), "s-stall"],
+        uploading: [T("Seeding"), "s-up"],
+        forcedUP: [T("Seeding · forced"), "s-up"],
+        stalledUP: [T("Seeding · no peers"), "s-stallup"],
+        queuedDL: [T("Queued"), "s-queue"],
+        queuedUP: [T("Queued · seeding"), "s-queue"],
+        checkingDL: [T("Checking"), "s-check"],
+        checkingUP: [T("Checking"), "s-check"],
+        checkingResumeData: [T("Checking resume data"), "s-check"],
+        queuedForChecking: [T("Queued for checking"), "s-check"],
+        allocating: [T("Allocating space"), "s-check"],
+        moving: [T("Moving"), "s-check"],
+        stoppedDL: [T("Stopped"), "s-stop"],
+        stoppedUP: [T("Completed"), "s-done"],
         error: ["Error", "s-err"],
-        missingFiles: ["Faltan archivos", "s-err"],
-        unknown: ["Desconocido", "s-err"]
+        missingFiles: [T("Missing files"), "s-err"],
+        unknown: [T("Unknown"), "s-err"]
     };
     const stateOf = (t) => {
         const [label, cls] = STATE[t.state] || [t.state, "s-stop"];
@@ -341,18 +349,18 @@
     const isStopped = (t) => String(t.state).startsWith("stopped");
 
     const STATUS_FILTERS = [
-        ["all", "Todos"],
-        ["downloading", "Descargando"],
-        ["seeding", "Sembrando"],
-        ["completed", "Completados"],
-        ["running", "En ejecución"],
-        ["stopped", "Detenidos"],
-        ["active", "Activos"],
-        ["inactive", "Inactivos"],
-        ["stalled", "Estancados"],
-        ["checking", "Comprobando"],
-        ["moving", "Moviendo"],
-        ["errored", "Con errores"]
+        ["all", T("All")],
+        ["downloading", T("Downloading")],
+        ["seeding", T("Seeding")],
+        ["completed", T("Completed§pl")],
+        ["running", T("Running")],
+        ["stopped", T("Stopped§pl")],
+        ["active", T("Active")],
+        ["inactive", T("Inactive")],
+        ["stalled", T("Stalled")],
+        ["checking", T("Checking")],
+        ["moving", T("Moving")],
+        ["errored", T("Errored")]
     ];
     const ALWAYS_CHIPS = new Set(["all", "downloading", "seeding", "completed", "stopped", "active"]);
 
@@ -435,22 +443,22 @@
     };
 
     const SORTS = [
-        ["added_on", "Fecha de agregado", -1],
-        ["name", "Nombre", 1],
-        ["progress", "Progreso", -1],
-        ["size", "Tamaño", -1],
-        ["dlspeed", "Velocidad de bajada", -1],
-        ["upspeed", "Velocidad de subida", -1],
-        ["eta", "Tiempo restante", 1],
+        ["added_on", T("Added on"), -1],
+        ["name", T("Name"), 1],
+        ["progress", T("Progress"), -1],
+        ["size", T("Size"), -1],
+        ["dlspeed", T("Download speed"), -1],
+        ["upspeed", T("Upload speed"), -1],
+        ["eta", T("Time remaining"), 1],
         ["ratio", "Ratio", -1],
-        ["num_seeds", "Semillas", -1],
-        ["state", "Estado", 1],
-        ["category", "Categoría", 1],
-        ["completion_on", "Fecha de completado", -1],
-        ["last_activity", "Última actividad", -1],
-        ["priority", "Posición en cola", 1]
+        ["num_seeds", T("Seeds"), -1],
+        ["state", T("Status"), 1],
+        ["category", T("Category"), 1],
+        ["completion_on", T("Completed on"), -1],
+        ["last_activity", T("Last activity"), -1],
+        ["priority", T("Queue position"), 1]
     ];
-    const collator = new Intl.Collator("es", { numeric: true, sensitivity: "base" });
+    const collator = new Intl.Collator(LOCALE, { numeric: true, sensitivity: "base" });
     const sortTorrents = (list) => {
         const { key, dir } = S.sort;
         list.sort((a, b) => {
@@ -575,7 +583,7 @@
         }
         catch {}
     };
-    const setPrefs = async (obj, okMsg = "Guardado") => {
+    const setPrefs = async (obj, okMsg = T("Saved")) => {
         const r = await run(api.post("app/setPreferences", { json: JSON.stringify(obj) }), okMsg);
         if (r !== null)
             Object.assign(S.prefs, obj);
@@ -648,7 +656,7 @@
             <div class="sheet-backdrop"></div>
             <div class="sheet ${cls}" role="dialog" aria-modal="true">
                 <div class="sheet-grip"></div>
-                ${title ? `<div class="sheet-head"><div style="flex:1;min-width:0"><h2>${esc(title)}</h2>${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><button class="icon-btn plain" data-x aria-label="Cerrar">${ic("x")}</button></div>` : ""}
+                ${title ? `<div class="sheet-head"><div style="flex:1;min-width:0"><h2>${esc(title)}</h2>${subtitle ? `<p>${esc(subtitle)}</p>` : ""}</div><button class="icon-btn plain" data-x aria-label="${T("Close")}">${ic("x")}</button></div>` : ""}
                 <div class="sheet-body"></div>
             </div>
         </div>`);
@@ -755,12 +763,12 @@
         return sheet;
     };
 
-    const confirmSheet = ({ title, message = "", ok = "Aceptar", danger = false, check = null }) => new Promise((resolve) => {
+    const confirmSheet = ({ title, message = "", ok = T("OK"), danger = false, check = null }) => new Promise((resolve) => {
         let result = false;
         const body = h(`<div>
             ${message ? `<p style="color:var(--text-dim);margin:0 2px 16px;overflow-wrap:anywhere">${esc(message)}</p>` : ""}
             ${check ? `<div class="group"><label class="item"><span class="lbl">${esc(check.label)}${check.sub ? `<small>${esc(check.sub)}</small>` : ""}</span><span class="switch"><input type="checkbox" data-ref="cb" ${check.value ? "checked" : ""}><i></i></span></label></div>` : ""}
-            <div class="btns"><button class="btn" data-ref="no">Cancelar</button><button class="btn ${danger ? "danger" : "primary"}" data-ref="yes">${esc(ok)}</button></div>
+            <div class="btns"><button class="btn" data-ref="no">${T("Cancel")}</button><button class="btn ${danger ? "danger" : "primary"}" data-ref="yes">${esc(ok)}</button></div>
         </div>`);
         const r = refs(body);
         const sheet = openSheet({
@@ -775,7 +783,7 @@
         });
     });
 
-    const promptSheet = ({ title, label = "", value = "", placeholder = "", type = "text", hint = "", ok = "Guardar", multiline = false, inputmode = "" }) => new Promise((resolve) => {
+    const promptSheet = ({ title, label = "", value = "", placeholder = "", type = "text", hint = "", ok = T("Save"), multiline = false, inputmode = "" }) => new Promise((resolve) => {
         let result = null;
         const body = h(`<form>
             <div class="field">
@@ -785,7 +793,7 @@
                     : `<input data-ref="inp" type="${type}" ${inputmode ? `inputmode="${inputmode}"` : ""} placeholder="${esc(placeholder)}" autocapitalize="none" autocorrect="off" spellcheck="false" ${(type === "number") ? "step=\"any\"" : ""}>`}
                 ${hint ? `<div class="hint">${esc(hint)}</div>` : ""}
             </div>
-            <div class="btns"><button type="button" class="btn" data-ref="no">Cancelar</button><button type="submit" class="btn primary">${esc(ok)}</button></div>
+            <div class="btns"><button type="button" class="btn" data-ref="no">${T("Cancel")}</button><button type="submit" class="btn primary">${esc(ok)}</button></div>
         </form>`);
         const r = refs(body);
         r.inp.value = value;
@@ -824,7 +832,7 @@
     const openPage = ({ title, actions = "", onClose }) => {
         const el = h(`<div class="page">
             <header class="topbar"><div class="topbar-row">
-                <button class="icon-btn" data-ref="back" aria-label="Atrás">${ic("back")}</button>
+                <button class="icon-btn" data-ref="back" aria-label="${T("Back")}">${ic("back")}</button>
                 <h1 data-ref="title">${esc(title)}</h1>
                 <span data-ref="actions" style="display:flex;gap:8px">${actions}</span>
             </div></header>
@@ -941,33 +949,33 @@
     const nameOf = (hashes) => ((hashes.length === 1) ? (tor(hashes[0])?.name || "") : `${hashes.length} torrents`);
 
     const actions = {
-        start: (hs) => run(api.post("torrents/start", { hashes: J(hs) }), (hs.length > 1) ? "Iniciados" : "Iniciado"),
-        stop: (hs) => run(api.post("torrents/stop", { hashes: J(hs) }), (hs.length > 1) ? "Detenidos" : "Detenido"),
+        start: (hs) => run(api.post("torrents/start", { hashes: J(hs) }), (hs.length > 1) ? T("Started§pl") : T("Started")),
+        stop: (hs) => run(api.post("torrents/stop", { hashes: J(hs) }), (hs.length > 1) ? T("Stopped§pl") : T("Stopped")),
         toggle: (hs) => {
             const t = tor(hs[0]);
             return (t && isStopped(t)) ? actions.start(hs) : actions.stop(hs);
         },
         forceStart: (hs) => {
             const on = hs.every((x) => tor(x)?.force_start);
-            return run(api.post("torrents/setForceStart", { hashes: J(hs), value: String(!on) }), on ? "Inicio forzado desactivado" : "Inicio forzado");
+            return run(api.post("torrents/setForceStart", { hashes: J(hs), value: String(!on) }), on ? T("Force start off") : T("Force start"));
         },
         recheck: async (hs) => {
-            if (await confirmSheet({ title: "¿Volver a comprobar?", message: `Se verificarán los datos de ${nameOf(hs)}.`, ok: "Comprobar" }))
-                run(api.post("torrents/recheck", { hashes: J(hs) }), "Comprobación iniciada");
+            if (await confirmSheet({ title: T("Recheck?"), message: T("The data of {0} will be verified.", nameOf(hs)), ok: T("Check") }))
+                run(api.post("torrents/recheck", { hashes: J(hs) }), T("Recheck started"));
         },
-        reannounce: (hs) => run(api.post("torrents/reannounce", { hashes: J(hs) }), "Reanunciado a los trackers"),
+        reannounce: (hs) => run(api.post("torrents/reannounce", { hashes: J(hs) }), T("Reannounced to trackers")),
         delete: async (hs, after) => {
             const res = await confirmSheet({
-                title: (hs.length > 1) ? `¿Eliminar ${hs.length} torrents?` : "¿Eliminar torrent?",
+                title: (hs.length > 1) ? T("Delete {0} torrents?", hs.length) : T("Delete torrent?"),
                 message: nameOf(hs),
-                ok: "Eliminar",
+                ok: T("Delete"),
                 danger: true,
-                check: { label: "Eliminar también los archivos", sub: "Borra los datos descargados del disco", value: store.get("deleteFiles", false) }
+                check: { label: T("Also delete the files"), sub: T("Removes the downloaded data from disk"), value: store.get("deleteFiles", false) }
             });
             if (!res)
                 return;
             store.set("deleteFiles", res.checked);
-            const ok = await run(api.post("torrents/delete", { hashes: J(hs), deleteFiles: String(res.checked) }), res.checked ? "Torrent y archivos eliminados" : "Torrent eliminado");
+            const ok = await run(api.post("torrents/delete", { hashes: J(hs), deleteFiles: String(res.checked) }), res.checked ? T("Torrent and files deleted") : T("Torrent deleted"));
             if (ok !== null) {
                 for (const x of hs)
                     S.sel.delete(x);
@@ -976,32 +984,32 @@
         },
         location: async (hs) => {
             const cur = tor(hs[0])?.save_path || S.prefs.save_path || "";
-            const v = await promptSheet({ title: "Cambiar ubicación", label: "Nueva ruta de guardado", value: cur, hint: "Los archivos se moverán a esta carpeta.", ok: "Mover" });
+            const v = await promptSheet({ title: T("Set location"), label: T("New save path"), value: cur, hint: T("The files will be moved to this folder."), ok: T("Move") });
             if (v && v.trim())
-                run(api.post("torrents/setLocation", { hashes: J(hs), location: v.trim() }), "Moviendo archivos…");
+                run(api.post("torrents/setLocation", { hashes: J(hs), location: v.trim() }), T("Moving files…"));
         },
         rename: async (hs) => {
             const t = tor(hs[0]);
-            const v = await promptSheet({ title: "Renombrar torrent", label: "Nombre", value: t?.name || "" });
+            const v = await promptSheet({ title: T("Rename torrent"), label: T("Name"), value: t?.name || "" });
             if (v && v.trim())
-                run(api.post("torrents/rename", { hash: hs[0], name: v.trim() }), "Renombrado");
+                run(api.post("torrents/rename", { hash: hs[0], name: v.trim() }), T("Renamed"));
         },
         category: async (hs) => {
             const cur = (hs.length === 1) ? (tor(hs[0])?.category ?? "") : undefined;
-            const opts = [{ value: "", label: "Sin categoría", icon: "x" }];
+            const opts = [{ value: "", label: T("No category"), icon: "x" }];
             for (const name of Object.keys(S.categories).sort(collator.compare))
                 opts.push({ value: name, label: name, sub: S.categories[name].savePath || "", icon: "folder", iconCls: "accent" });
-            opts.push({ value: "\u0000new", label: "Nueva categoría…", icon: "plus", handoff: true });
-            const v = await choiceSheet({ title: "Categoría", subtitle: nameOf(hs), options: opts, selected: cur });
+            opts.push({ value: "\u0000new", label: T("New category…"), icon: "plus", handoff: true });
+            const v = await choiceSheet({ title: T("Category"), subtitle: nameOf(hs), options: opts, selected: cur });
             if (v === undefined)
                 return;
             if (v === "\u0000new") {
                 const name = await categoryEditor();
                 if (name)
-                    run(api.post("torrents/setCategory", { hashes: J(hs), category: name }), "Categoría asignada");
+                    run(api.post("torrents/setCategory", { hashes: J(hs), category: name }), T("Category set"));
                 return;
             }
-            run(api.post("torrents/setCategory", { hashes: J(hs), category: v }), v ? "Categoría asignada" : "Categoría quitada");
+            run(api.post("torrents/setCategory", { hashes: J(hs), category: v }), v ? T("Category set") : T("Category cleared"));
         },
         tags: (hs) => {
             const counts = new Map();
@@ -1011,19 +1019,19 @@
             }
             const body = h(`<div>
                 <div class="group" data-ref="list"></div>
-                <div class="btns"><button class="btn" data-ref="add">${ic("plus", "sm")} Nueva etiqueta</button></div>
+                <div class="btns"><button class="btn" data-ref="add">${ic("plus", "sm")} ${T("New tag")}</button></div>
             </div>`);
             const r = refs(body);
-            const sheet = openSheet({ title: "Etiquetas", subtitle: nameOf(hs), body });
+            const sheet = openSheet({ title: T("Tags"), subtitle: nameOf(hs), body });
             const render = () => {
                 r.list.innerHTML = "";
                 const all = [...S.tags].sort(collator.compare);
                 if (!all.length)
-                    r.list.innerHTML = "<div class=\"item\"><span class=\"lbl\" style=\"color:var(--text-faint)\">Aún no hay etiquetas</span></div>";
+                    r.list.innerHTML = "<div class=\"item\"><span class=\"lbl\" style=\"color:var(--text-faint)\">" + T("No tags yet") + "</span></div>";
                 for (const tg of all) {
                     const n = counts.get(tg) || 0;
                     const state = (n === hs.length) ? "on" : "";
-                    const b = h(`<button class="item"><span class="ico">${ic("tag", "sm")}</span><span class="lbl">${esc(tg)}${(n && (n < hs.length)) ? `<small>En ${n} de ${hs.length}</small>` : ""}</span><span class="boxcheck ${state}">${ic("check", "xs")}</span></button>`);
+                    const b = h(`<button class="item"><span class="ico">${ic("tag", "sm")}</span><span class="lbl">${esc(tg)}${(n && (n < hs.length)) ? `<small>${T("In {0} of {1}", n, hs.length)}</small>` : ""}</span><span class="boxcheck ${state}">${ic("check", "xs")}</span></button>`);
                     b.addEventListener("click", async () => {
                         const has = (counts.get(tg) || 0) === hs.length;
                         const ok = await run(api.post(has ? "torrents/removeTags" : "torrents/addTags", { hashes: J(hs), tags: tg }));
@@ -1038,24 +1046,24 @@
             render();
             r.add.addEventListener("click", async () => {
                 sheet.close({ handoff: true });
-                const v = await promptSheet({ title: "Nueva etiqueta", label: "Nombre de la etiqueta", ok: "Crear y asignar" });
+                const v = await promptSheet({ title: T("New tag"), label: T("Tag name"), ok: T("Create and assign") });
                 if (v && v.trim()) {
                     const tg = v.trim();
                     await run(api.post("torrents/createTags", { tags: tg }));
-                    run(api.post("torrents/addTags", { hashes: J(hs), tags: tg }), "Etiqueta asignada");
+                    run(api.post("torrents/addTags", { hashes: J(hs), tags: tg }), T("Tag added"));
                 }
             });
         },
         autoTMM: (hs) => {
             const on = hs.every((x) => tor(x)?.auto_tmm);
-            return run(api.post("torrents/setAutoManagement", { hashes: J(hs), enable: String(!on) }), on ? "Gestión automática desactivada" : "Gestión automática activada");
+            return run(api.post("torrents/setAutoManagement", { hashes: J(hs), enable: String(!on) }), on ? T("Automatic management off") : T("Automatic management on"));
         },
         speedLimit: async (hs, dir) => {
             const key = (dir === "dl") ? "dl_limit" : "up_limit";
             const cur = (hs.length === 1) ? (tor(hs[0])?.[key] || 0) : 0;
             const v = await promptSheet({
-                title: (dir === "dl") ? "Límite de bajada" : "Límite de subida",
-                label: "KiB/s (0 = sin límite)",
+                title: (dir === "dl") ? T("Download limit") : T("Upload limit"),
+                label: T("KiB/s (0 = unlimited)"),
                 value: (cur > 0) ? String(Math.round(cur / 1024)) : "0",
                 type: "number",
                 inputmode: "numeric"
@@ -1063,19 +1071,19 @@
             if (v === null)
                 return;
             const n = Math.max(0, Number(v) || 0);
-            run(api.post((dir === "dl") ? "torrents/setDownloadLimit" : "torrents/setUploadLimit", { hashes: J(hs), limit: Math.round(n * 1024) }), n ? `Límite: ${fmtSpeed(n * 1024)}` : "Sin límite");
+            run(api.post((dir === "dl") ? "torrents/setDownloadLimit" : "torrents/setUploadLimit", { hashes: J(hs), limit: Math.round(n * 1024) }), n ? T("Limit: {0}", fmtSpeed(n * 1024)) : T("No limit"));
         },
         shareLimits: (hs) => {
             const t = tor(hs[0]) || {};
             const mode = (v) => ((v === -2) ? "global" : ((v === -1) ? "none" : "custom"));
             const body = h(`<form>
-                <div class="field"><label>Ratio</label><select data-ref="rm"><option value="global">Usar límite global</option><option value="none">Sin límite</option><option value="custom">Personalizado</option></select></div>
-                <div class="field" data-ref="rvF"><input type="number" step="0.01" min="0" data-ref="rv" inputmode="decimal" placeholder="Ej.: 2"></div>
-                <div class="field"><label>Tiempo de siembra (minutos)</label><select data-ref="sm"><option value="global">Usar límite global</option><option value="none">Sin límite</option><option value="custom">Personalizado</option></select></div>
-                <div class="field" data-ref="svF"><input type="number" min="0" data-ref="sv" inputmode="numeric" placeholder="Ej.: 1440"></div>
-                <div class="field"><label>Tiempo inactivo de siembra (minutos)</label><select data-ref="im"><option value="global">Usar límite global</option><option value="none">Sin límite</option><option value="custom">Personalizado</option></select></div>
-                <div class="field" data-ref="ivF"><input type="number" min="0" data-ref="iv" inputmode="numeric" placeholder="Ej.: 60"></div>
-                <div class="btns"><button type="button" class="btn" data-ref="no">Cancelar</button><button class="btn primary">Guardar</button></div>
+                <div class="field"><label>Ratio</label><select data-ref="rm"><option value="global">${T("Use global limit")}</option><option value="none">${T("No limit")}</option><option value="custom">${T("Custom")}</option></select></div>
+                <div class="field" data-ref="rvF"><input type="number" step="0.01" min="0" data-ref="rv" inputmode="decimal" placeholder="${T("e.g. {0}", 2)}"></div>
+                <div class="field"><label>${T("Seeding time (minutes)")}</label><select data-ref="sm"><option value="global">${T("Use global limit")}</option><option value="none">${T("No limit")}</option><option value="custom">${T("Custom")}</option></select></div>
+                <div class="field" data-ref="svF"><input type="number" min="0" data-ref="sv" inputmode="numeric" placeholder="${T("e.g. {0}", 1440)}"></div>
+                <div class="field"><label>${T("Inactive seeding time (minutes)")}</label><select data-ref="im"><option value="global">${T("Use global limit")}</option><option value="none">${T("No limit")}</option><option value="custom">${T("Custom")}</option></select></div>
+                <div class="field" data-ref="ivF"><input type="number" min="0" data-ref="iv" inputmode="numeric" placeholder="${T("e.g. {0}", 60)}"></div>
+                <div class="btns"><button type="button" class="btn" data-ref="no">${T("Cancel")}</button><button class="btn primary">${T("Save")}</button></div>
             </form>`);
             const r = refs(body);
             r.rm.value = mode(t.ratio_limit ?? -2);
@@ -1092,7 +1100,7 @@
             for (const s of [r.rm, r.sm, r.im])
                 s.addEventListener("change", sync2);
             sync2();
-            const sheet = openSheet({ title: "Límites de siembra", subtitle: nameOf(hs), body });
+            const sheet = openSheet({ title: T("Share limits"), subtitle: nameOf(hs), body });
             r.no.addEventListener("click", () => sheet.close());
             const val = (m, v) => ((m === "global") ? -2 : ((m === "none") ? -1 : Math.max(0, Number(v) || 0)));
             body.addEventListener("submit", (e) => {
@@ -1102,7 +1110,7 @@
                     ratioLimit: val(r.rm.value, r.rv.value),
                     seedingTimeLimit: Math.round(val(r.sm.value, r.sv.value)),
                     inactiveSeedingTimeLimit: Math.round(val(r.im.value, r.iv.value))
-                }), "Límites guardados");
+                }), T("Limits saved"));
                 sheet.close();
             });
         },
@@ -1114,13 +1122,13 @@
                 return;
             return run(api.post(endpoint, { hashes: J(todo) }), target ? msgOn : msgOff);
         },
-        sequential: (hs) => actions.toggleFlag(hs, "seq_dl", "torrents/toggleSequentialDownload", "Descarga secuencial activada", "Descarga secuencial desactivada"),
-        firstLast: (hs) => actions.toggleFlag(hs, "f_l_piece_prio", "torrents/toggleFirstLastPiecePrio", "Primeras y últimas piezas primero", "Prioridad de piezas normal"),
+        sequential: (hs) => actions.toggleFlag(hs, "seq_dl", "torrents/toggleSequentialDownload", T("Sequential download on"), T("Sequential download off")),
+        firstLast: (hs) => actions.toggleFlag(hs, "f_l_piece_prio", "torrents/toggleFirstLastPiecePrio", T("First and last pieces first"), T("Normal piece priority")),
         superSeeding: (hs) => {
             const on = hs.every((x) => tor(x)?.super_seeding);
-            return run(api.post("torrents/setSuperSeeding", { hashes: J(hs), value: String(!on) }), on ? "Super siembra desactivada" : "Super siembra activada");
+            return run(api.post("torrents/setSuperSeeding", { hashes: J(hs), value: String(!on) }), on ? T("Super seeding off") : T("Super seeding on"));
         },
-        queue: (hs, where) => run(api.post(`torrents/${where}`, { hashes: J(hs) }), "Cola actualizada"),
+        queue: (hs, where) => run(api.post(`torrents/${where}`, { hashes: J(hs) }), T("Queue updated")),
         exportTorrent: async (hs) => {
             for (const hash of hs) {
                 try {
@@ -1137,7 +1145,7 @@
                     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
                 }
                 catch (e) {
-                    toast(`No se pudo exportar: ${e.message}`, "err");
+                    toast(T("Could not export: {0}", e.message), "err");
                 }
             }
         }
@@ -1152,66 +1160,66 @@
         const anyIncomplete = hs.some((x) => (tor(x)?.progress ?? 1) < 1);
         menuSheet({
             title: one ? t.name : `${hs.length} torrents`,
-            subtitle: one ? stateOf(t).label : "Acciones para la selección",
+            subtitle: one ? stateOf(t).label : T("Actions for the selection"),
             groups: [
                 {
                     items: [
-                        { icon: "play", label: "Iniciar", onClick: () => actions.start(hs), hidden: one && !isStopped(t) },
-                        { icon: "pause", label: "Detener", onClick: () => actions.stop(hs), hidden: one && isStopped(t) },
-                        { icon: "zap", label: "Inicio forzado", value: all("force_start"), onClick: () => actions.forceStart(hs) }
+                        { icon: "play", label: T("Start"), onClick: () => actions.start(hs), hidden: one && !isStopped(t) },
+                        { icon: "pause", label: T("Stop"), onClick: () => actions.stop(hs), hidden: one && isStopped(t) },
+                        { icon: "zap", label: T("Force start"), value: all("force_start"), onClick: () => actions.forceStart(hs) }
                     ]
                 },
                 {
-                    title: "Organizar",
+                    title: T("Organize"),
                     items: [
-                        { icon: "folder", label: "Categoría", value: one ? (t.category || "Ninguna") : undefined, onClick: () => actions.category(hs) },
-                        { icon: "tag", label: "Etiquetas", value: one ? (tagsOf(t).length ? String(tagsOf(t).length) : "") : undefined, onClick: () => actions.tags(hs) },
-                        { icon: "folderMove", label: "Cambiar ubicación…", onClick: () => actions.location(hs) },
-                        { icon: "edit", label: "Renombrar…", hidden: !one, onClick: () => actions.rename(hs) },
-                        { icon: "sparkles", label: "Gestión automática", sub: "La categoría decide la ruta de guardado", value: all("auto_tmm"), onClick: () => actions.autoTMM(hs) }
+                        { icon: "folder", label: T("Category"), value: one ? (t.category || T("None")) : undefined, onClick: () => actions.category(hs) },
+                        { icon: "tag", label: T("Tags"), value: one ? (tagsOf(t).length ? String(tagsOf(t).length) : "") : undefined, onClick: () => actions.tags(hs) },
+                        { icon: "folderMove", label: T("Set location…"), onClick: () => actions.location(hs) },
+                        { icon: "edit", label: T("Rename…"), hidden: !one, onClick: () => actions.rename(hs) },
+                        { icon: "sparkles", label: T("Automatic management"), sub: T("The category decides the save path"), value: all("auto_tmm"), onClick: () => actions.autoTMM(hs) }
                     ]
                 },
                 {
-                    title: "Velocidad y siembra",
+                    title: T("Speed and seeding"),
                     items: [
-                        { icon: "down", label: "Límite de bajada…", value: one ? fmtLimit(t.dl_limit) : undefined, onClick: () => actions.speedLimit(hs, "dl") },
-                        { icon: "up", label: "Límite de subida…", value: one ? fmtLimit(t.up_limit) : undefined, onClick: () => actions.speedLimit(hs, "up") },
-                        { icon: "scale", label: "Límites de siembra…", onClick: () => actions.shareLimits(hs) },
-                        { icon: "seed", label: "Super siembra", value: all("super_seeding"), hidden: !anyComplete, onClick: () => actions.superSeeding(hs) }
+                        { icon: "down", label: T("Download limit…"), value: one ? fmtLimit(t.dl_limit) : undefined, onClick: () => actions.speedLimit(hs, "dl") },
+                        { icon: "up", label: T("Upload limit…"), value: one ? fmtLimit(t.up_limit) : undefined, onClick: () => actions.speedLimit(hs, "up") },
+                        { icon: "scale", label: T("Share limits…"), onClick: () => actions.shareLimits(hs) },
+                        { icon: "seed", label: T("Super seeding"), value: all("super_seeding"), hidden: !anyComplete, onClick: () => actions.superSeeding(hs) }
                     ]
                 },
                 {
-                    title: "Descarga",
+                    title: T("Download"),
                     items: [
-                        { icon: "ordered", label: "Descarga secuencial", value: all("seq_dl"), hidden: !anyIncomplete, onClick: () => actions.sequential(hs) },
-                        { icon: "pieces", label: "Primeras y últimas piezas primero", value: all("f_l_piece_prio"), hidden: !anyIncomplete, onClick: () => actions.firstLast(hs) },
-                        { icon: "recheck", label: "Forzar comprobación", onClick: () => actions.recheck(hs) },
-                        { icon: "megaphone", label: "Forzar reanuncio", onClick: () => actions.reannounce(hs) }
+                        { icon: "ordered", label: T("Sequential download"), value: all("seq_dl"), hidden: !anyIncomplete, onClick: () => actions.sequential(hs) },
+                        { icon: "pieces", label: T("First and last pieces first"), value: all("f_l_piece_prio"), hidden: !anyIncomplete, onClick: () => actions.firstLast(hs) },
+                        { icon: "recheck", label: T("Force recheck"), onClick: () => actions.recheck(hs) },
+                        { icon: "megaphone", label: T("Force reannounce"), onClick: () => actions.reannounce(hs) }
                     ]
                 },
                 {
-                    title: "Cola",
+                    title: T("Queue"),
                     items: queueing
                         ? [
-                            { icon: "toTop", label: "Mover al principio", onClick: () => actions.queue(hs, "topPrio") },
-                            { icon: "up", label: "Subir", onClick: () => actions.queue(hs, "increasePrio") },
-                            { icon: "down", label: "Bajar", onClick: () => actions.queue(hs, "decreasePrio") },
-                            { icon: "toBottom", label: "Mover al final", onClick: () => actions.queue(hs, "bottomPrio") }
+                            { icon: "toTop", label: T("Move to top"), onClick: () => actions.queue(hs, "topPrio") },
+                            { icon: "up", label: T("Move up"), onClick: () => actions.queue(hs, "increasePrio") },
+                            { icon: "down", label: T("Move down"), onClick: () => actions.queue(hs, "decreasePrio") },
+                            { icon: "toBottom", label: T("Move to bottom"), onClick: () => actions.queue(hs, "bottomPrio") }
                         ]
                         : []
                 },
                 {
-                    title: "Copiar y exportar",
+                    title: T("Copy and export"),
                     items: [
-                        { icon: "copy", label: "Copiar nombre", onClick: () => copyText(hs.map((x) => tor(x)?.name).join("\n"), "Nombre copiado") },
-                        { icon: "magnet", label: "Copiar enlace magnet", onClick: () => copyText(hs.map((x) => tor(x)?.magnet_uri).join("\n"), "Enlace magnet copiado") },
-                        { icon: "hash", label: "Copiar hash", onClick: () => copyText(hs.map((x) => tor(x)?.infohash_v1 || x).join("\n"), "Hash copiado") },
-                        { icon: "download", label: "Exportar .torrent", onClick: () => actions.exportTorrent(hs) }
+                        { icon: "copy", label: T("Copy name"), onClick: () => copyText(hs.map((x) => tor(x)?.name).join("\n"), T("Name copied")) },
+                        { icon: "magnet", label: T("Copy magnet link"), onClick: () => copyText(hs.map((x) => tor(x)?.magnet_uri).join("\n"), T("Magnet link copied")) },
+                        { icon: "hash", label: T("Copy hash"), onClick: () => copyText(hs.map((x) => tor(x)?.infohash_v1 || x).join("\n"), T("Hash copied")) },
+                        { icon: "download", label: T("Export .torrent"), onClick: () => actions.exportTorrent(hs) }
                     ]
                 },
                 {
                     items: [
-                        { icon: "trash", label: "Eliminar…", danger: true, onClick: () => actions.delete(hs, after) }
+                        { icon: "trash", label: T("Delete…"), danger: true, onClick: () => actions.delete(hs, after) }
                     ]
                 }
             ]
@@ -1224,23 +1232,23 @@
     const categoryEditor = (existing) => new Promise((resolve) => {
         let result = null;
         const body = h(`<form>
-            <div class="field"><label>Nombre</label><input type="text" data-ref="name" placeholder="Películas" autocapitalize="none" ${existing ? "disabled" : ""}></div>
-            <div class="field"><label>Ruta de guardado</label><input type="text" data-ref="path" placeholder="${esc(S.prefs.save_path || "/ruta/de/descargas")}" autocapitalize="none" autocorrect="off" spellcheck="false"><div class="hint">Déjala vacía para usar la ruta predeterminada.</div></div>
-            <div class="btns"><button type="button" class="btn" data-ref="no">Cancelar</button><button class="btn primary">${existing ? "Guardar" : "Crear"}</button></div>
+            <div class="field"><label>${T("Name")}</label><input type="text" data-ref="name" placeholder="${T("Movies")}" autocapitalize="none" ${existing ? "disabled" : ""}></div>
+            <div class="field"><label>${T("Save path")}</label><input type="text" data-ref="path" placeholder="${esc(S.prefs.save_path || T("/path/to/downloads"))}" autocapitalize="none" autocorrect="off" spellcheck="false"><div class="hint">${T("Leave empty to use the default path.")}</div></div>
+            <div class="btns"><button type="button" class="btn" data-ref="no">${T("Cancel")}</button><button class="btn primary">${existing ? T("Save") : T("Create")}</button></div>
         </form>`);
         const r = refs(body);
         if (existing) {
             r.name.value = existing;
             r.path.value = S.categories[existing]?.savePath || "";
         }
-        const sheet = openSheet({ title: existing ? "Editar categoría" : "Nueva categoría", body, onClose: () => resolve(result) });
+        const sheet = openSheet({ title: existing ? T("Edit category") : T("New category"), body, onClose: () => resolve(result) });
         r.no.addEventListener("click", () => sheet.close());
         body.addEventListener("submit", async (e) => {
             e.preventDefault();
             const name = r.name.value.trim();
             if (!name)
                 return r.name.focus();
-            const ok = await run(api.post(existing ? "torrents/editCategory" : "torrents/createCategory", { category: name, savePath: r.path.value.trim() }), existing ? "Categoría guardada" : "Categoría creada");
+            const ok = await run(api.post(existing ? "torrents/editCategory" : "torrents/createCategory", { category: name, savePath: r.path.value.trim() }), existing ? T("Category saved") : T("Category created"));
             if (ok !== null) {
                 S.categories[name] = Object.assign(S.categories[name] || { name }, { savePath: r.path.value.trim() });
                 result = name;
@@ -1259,43 +1267,43 @@
         const cats = Object.keys(S.categories).sort(collator.compare);
         const body = h(`<form>
             <div class="seg" style="position:static;margin-top:0">
-                <button type="button" data-mode="link" class="active">${ic("link", "sm")} Enlace</button>
-                <button type="button" data-mode="file">${ic("file", "sm")} Archivo .torrent</button>
+                <button type="button" data-mode="link" class="active">${ic("link", "sm")} ${T("Link")}</button>
+                <button type="button" data-mode="file">${ic("file", "sm")} ${T("Torrent file")}</button>
             </div>
             <div class="field" data-ref="linkF">
-                <textarea data-ref="urls" placeholder="magnet:?xt=urn:btih:…&#10;https://…/archivo.torrent&#10;(uno por línea)" autocapitalize="none" autocorrect="off" spellcheck="false"></textarea>
-                <div class="hint">Enlaces magnet, URLs HTTP o hashes. Uno por línea.</div>
+                <textarea data-ref="urls" placeholder="magnet:?xt=urn:btih:…&#10;https://…/${T("file.torrent")}&#10;${T("(one per line)")}" autocapitalize="none" autocorrect="off" spellcheck="false"></textarea>
+                <div class="hint">${T("Magnet links, HTTP URLs or hashes. One per line.")}</div>
             </div>
             <div class="field hidden" data-ref="fileF">
-                <label class="filepick" data-ref="pick">${ic("upload")}<b data-ref="pickTxt">Elegir archivos .torrent</b><small>Puedes seleccionar varios</small>
+                <label class="filepick" data-ref="pick">${ic("upload")}<b data-ref="pickTxt">${T("Choose .torrent files")}</b><small>${T("You can select several")}</small>
                     <input type="file" data-ref="files" accept=".torrent,application/x-bittorrent" multiple hidden>
                 </label>
             </div>
             <div class="row2">
-                <div class="field"><label>Categoría</label><select data-ref="cat"><option value="">Sin categoría</option>${cats.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}</select></div>
-                <div class="field"><label>Disposición</label><select data-ref="layout"><option value="Original">Original</option><option value="Subfolder">Con subcarpeta</option><option value="NoSubfolder">Sin subcarpeta</option></select></div>
+                <div class="field"><label>${T("Category")}</label><select data-ref="cat"><option value="">${T("No category")}</option>${cats.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}</select></div>
+                <div class="field"><label>${T("Layout")}</label><select data-ref="layout"><option value="Original">Original</option><option value="Subfolder">${T("Create subfolder§add")}</option><option value="NoSubfolder">${T("Don't create subfolder")}</option></select></div>
             </div>
-            <div class="field" data-ref="tagsF"><span class="flabel">Etiquetas</span><div class="chips" data-ref="tags" style="margin:0;padding:0;flex-wrap:wrap"></div></div>
-            <div class="field" data-ref="pathF"><label>Guardar en</label><input type="text" data-ref="path" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
+            <div class="field" data-ref="tagsF"><span class="flabel">${T("Tags")}</span><div class="chips" data-ref="tags" style="margin:0;padding:0;flex-wrap:wrap"></div></div>
+            <div class="field" data-ref="pathF"><label>${T("Save to")}</label><input type="text" data-ref="path" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
             <div class="group toggles">
-                <label class="item"><span class="lbl">Iniciar torrent</span><span class="switch"><input type="checkbox" data-ref="start"><i></i></span></label>
-                <label class="item"><span class="lbl">Gestión automática<small>La categoría define la ruta</small></span><span class="switch"><input type="checkbox" data-ref="tmm"><i></i></span></label>
-                <label class="item"><span class="lbl">Descarga secuencial</span><span class="switch"><input type="checkbox" data-ref="seq"><i></i></span></label>
-                <label class="item"><span class="lbl">Primeras y últimas piezas primero</span><span class="switch"><input type="checkbox" data-ref="fl"><i></i></span></label>
-                <label class="item"><span class="lbl">Omitir comprobación de hash</span><span class="switch"><input type="checkbox" data-ref="skip"><i></i></span></label>
-                <label class="item"><span class="lbl">Agregar al principio de la cola</span><span class="switch"><input type="checkbox" data-ref="top"><i></i></span></label>
+                <label class="item"><span class="lbl">${T("Start torrent")}</span><span class="switch"><input type="checkbox" data-ref="start"><i></i></span></label>
+                <label class="item"><span class="lbl">${T("Automatic management")}<small>${T("The category sets the path")}</small></span><span class="switch"><input type="checkbox" data-ref="tmm"><i></i></span></label>
+                <label class="item"><span class="lbl">${T("Sequential download")}</span><span class="switch"><input type="checkbox" data-ref="seq"><i></i></span></label>
+                <label class="item"><span class="lbl">${T("First and last pieces first")}</span><span class="switch"><input type="checkbox" data-ref="fl"><i></i></span></label>
+                <label class="item"><span class="lbl">${T("Skip hash check")}</span><span class="switch"><input type="checkbox" data-ref="skip"><i></i></span></label>
+                <label class="item"><span class="lbl">${T("Add to top of queue")}</span><span class="switch"><input type="checkbox" data-ref="top"><i></i></span></label>
             </div>
             <details class="group" style="padding:0 14px" data-ref="adv">
-                <summary class="item" style="padding:12px 0;list-style:none"><span class="lbl">Más opciones</span>${ic("chevDown", "sm")}</summary>
+                <summary class="item" style="padding:12px 0;list-style:none"><span class="lbl">${T("More options")}</span>${ic("chevDown", "sm")}</summary>
                 <div style="padding-bottom:8px">
-                    <div class="field"><label>Renombrar torrent</label><input type="text" data-ref="rename" placeholder="Opcional"></div>
+                    <div class="field"><label>${T("Rename torrent")}</label><input type="text" data-ref="rename" placeholder="${T("Optional")}"></div>
                     <div class="row2">
-                        <div class="field"><label>Límite ↓ KiB/s</label><input type="number" min="0" inputmode="numeric" data-ref="dl" placeholder="0"></div>
-                        <div class="field"><label>Límite ↑ KiB/s</label><input type="number" min="0" inputmode="numeric" data-ref="ul" placeholder="0"></div>
+                        <div class="field"><label>${T("Limit ↓ KiB/s")}</label><input type="number" min="0" inputmode="numeric" data-ref="dl" placeholder="0"></div>
+                        <div class="field"><label>${T("Limit ↑ KiB/s")}</label><input type="number" min="0" inputmode="numeric" data-ref="ul" placeholder="0"></div>
                     </div>
                 </div>
             </details>
-            <button class="btn primary" data-ref="submit">${ic("plus", "sm")} Agregar</button>
+            <button class="btn primary" data-ref="submit">${ic("plus", "sm")} ${T("Add")}</button>
         </form>`);
         const r = refs(body);
         let mode = "link";
@@ -1346,24 +1354,24 @@
         r.files.addEventListener("change", () => {
             const n = r.files.files.length;
             r.pick.classList.toggle("has", n > 0);
-            r.pickTxt.textContent = n ? ((n === 1) ? r.files.files[0].name : `${n} archivos seleccionados`) : "Elegir archivos .torrent";
+            r.pickTxt.textContent = n ? ((n === 1) ? r.files.files[0].name : T("{0} files selected", n)) : T("Choose .torrent files");
         });
 
-        const sheet = openSheet({ title: "Agregar torrent", body });
+        const sheet = openSheet({ title: T("Add torrent"), body });
         body.addEventListener("submit", async (e) => {
             e.preventDefault();
             const fd = new FormData();
             if (mode === "link") {
                 const urls = r.urls.value.split("\n").map((x) => x.trim()).filter(Boolean);
                 if (!urls.length) {
-                    toast("Pega al menos un enlace", "err");
+                    toast(T("Paste at least one link"), "err");
                     return r.urls.focus();
                 }
                 fd.append("urls", urls.join("\n"));
             }
             else {
                 if (!r.files.files.length) {
-                    toast("Elige al menos un archivo .torrent", "err");
+                    toast(T("Choose at least one .torrent file"), "err");
                     return;
                 }
                 for (const f of r.files.files)
@@ -1392,16 +1400,16 @@
             try {
                 const res = await api.form("torrents/add", fd);
                 if (String(res).trim().startsWith("Fails")) {
-                    toast("qBittorrent rechazó el torrent (¿ya existe o el enlace no es válido?)", "err");
+                    toast(T("qBittorrent rejected the torrent (already added, or invalid link?)"), "err");
                     r.submit.disabled = false;
                     return;
                 }
-                toast("Torrent agregado", "ok");
+                toast(T("Torrent added"), "ok");
                 sheet.close();
                 kickSync();
             }
             catch (err) {
-                toast(err.message || "No se pudo agregar", "err");
+                toast(err.message || T("Could not add"), "err");
                 r.submit.disabled = false;
             }
         });
@@ -1433,17 +1441,17 @@
             <div class="main" data-ref="main">
                 <div class="head">
                     <h1>Torrents</h1>
-                    <button class="icon-btn" data-ref="alt" aria-label="Límites alternativos de velocidad">${ic("snail")}</button>
-                    <button class="icon-btn" data-ref="filterBtn" aria-label="Filtros">${ic("filter")}<span class="dot hidden" data-ref="filterDot"></span></button>
+                    <button class="icon-btn" data-ref="alt" aria-label="${T("Alternative speed limits")}">${ic("snail")}</button>
+                    <button class="icon-btn" data-ref="filterBtn" aria-label="${T("Filters")}">${ic("filter")}<span class="dot hidden" data-ref="filterDot"></span></button>
                 </div>
                 <div class="speeds">
                     <button class="speed dl" data-ref="dlBox"><span class="ic">${ic("down", "sm")}</span><span style="min-width:0;text-align:left"><b data-ref="dl">—</b><small data-ref="dlSub">&nbsp;</small></span></button>
                     <button class="speed up" data-ref="upBox"><span class="ic">${ic("up", "sm")}</span><span style="min-width:0;text-align:left"><b data-ref="up">—</b><small data-ref="upSub">&nbsp;</small></span></button>
                 </div>
-                <div class="diskline" data-ref="disk">${ic("hdd", "sm")}<span>Espacio libre</span><b data-ref="free">—</b></div>
-                <div class="offline hidden" data-ref="offline">${ic("wifiOff", "sm")} Sin conexión con qBittorrent. Reintentando…</div>
+                <div class="diskline" data-ref="disk">${ic("hdd", "sm")}<span>${T("Free space")}</span><b data-ref="free">—</b></div>
+                <div class="offline hidden" data-ref="offline">${ic("wifiOff", "sm")} ${T("Lost connection to qBittorrent. Retrying…")}</div>
                 <div class="sticky">
-                    <label class="searchbar">${ic("search", "sm")}<input type="search" data-ref="q" placeholder="Buscar en tus torrents" autocomplete="off" autocapitalize="none" enterkeyhint="search"><button type="button" class="icon-btn plain hidden" data-ref="qClear" style="width:34px;height:34px" aria-label="Borrar">${ic("x", "sm")}</button></label>
+                    <label class="searchbar">${ic("search", "sm")}<input type="search" data-ref="q" placeholder="${T("Search your torrents")}" autocomplete="off" autocapitalize="none" enterkeyhint="search"><button type="button" class="icon-btn plain hidden" data-ref="qClear" style="width:34px;height:34px" aria-label="${T("Clear")}">${ic("x", "sm")}</button></label>
                     <div class="chips" data-ref="chips"></div>
                 </div>
                 <div class="listinfo"><span data-ref="count"></span><button data-ref="sortBtn">${ic("sort", "sm")}<span data-ref="sortLbl"></span></button></div>
@@ -1451,17 +1459,17 @@
                 <div class="empty hidden" data-ref="empty"></div>
             </div>
             <div class="selhead-fixed"><div class="selhead">
-                <button class="icon-btn" data-ref="selClose" aria-label="Cancelar selección">${ic("x")}</button>
-                <b data-ref="selCount">0 seleccionados</b>
-                <button class="icon-btn" data-ref="selAll" aria-label="Seleccionar todo">${ic("checkAll")}</button>
+                <button class="icon-btn" data-ref="selClose" aria-label="${T("Cancel selection")}">${ic("x")}</button>
+                <b data-ref="selCount">${T("{0} selected", 0)}</b>
+                <button class="icon-btn" data-ref="selAll" aria-label="${T("Select all")}">${ic("checkAll")}</button>
             </div></div>
-            <button class="fab" data-ref="fab" aria-label="Agregar torrent">${ic("plus")}</button>
+            <button class="fab" data-ref="fab" aria-label="${T("Add torrent")}">${ic("plus")}</button>
             <div class="selbar" data-ref="selbar">
-                <button data-a="start">${ic("play")}Iniciar</button>
-                <button data-a="stop">${ic("pause")}Detener</button>
-                <button data-a="category">${ic("folder")}Categoría</button>
-                <button data-a="delete" class="danger">${ic("trash")}Eliminar</button>
-                <button data-a="more">${ic("more")}Más</button>
+                <button data-a="start">${ic("play")}${T("Start")}</button>
+                <button data-a="stop">${ic("pause")}${T("Stop")}</button>
+                <button data-a="category">${ic("folder")}${T("Category")}</button>
+                <button data-a="delete" class="danger">${ic("trash")}${T("Delete")}</button>
+                <button data-a="more">${ic("more")}${T("More")}</button>
             </div>
         </section>`);
         Object.assign(TV, refs(el));
@@ -1493,7 +1501,7 @@
         });
         TV.alt.addEventListener("click", async () => {
             const on = !S.server.use_alt_speed_limits;
-            const ok = await run(api.post("transfer/toggleSpeedLimitsMode"), on ? "Límites alternativos activados" : "Límites alternativos desactivados");
+            const ok = await run(api.post("transfer/toggleSpeedLimitsMode"), on ? T("Alternative speed limits on") : T("Alternative speed limits off"));
             if (ok !== null) {
                 S.server.use_alt_speed_limits = on;
                 renderHeader();
@@ -1520,7 +1528,7 @@
                 return;
             const hs = [...S.sel];
             if (!hs.length)
-                return toast("Selecciona al menos un torrent", "err");
+                return toast(T("Select at least one torrent"), "err");
             const a = b.dataset.a;
             if (a === "more")
                 moreMenu(hs, { after: () => setSelecting(false) });
@@ -1573,17 +1581,17 @@
         const key = alt ? ((dir === "dl") ? "alt_dl_limit" : "alt_up_limit") : ((dir === "dl") ? "dl_limit" : "up_limit");
         const cur = S.prefs[key] ?? ((dir === "dl") ? S.server.dl_rate_limit : S.server.up_rate_limit) ?? 0;
         const v = await promptSheet({
-            title: `${(dir === "dl") ? "Límite global de bajada" : "Límite global de subida"}${alt ? " (alternativo)" : ""}`,
-            label: "KiB/s (0 = sin límite)",
+            title: `${(dir === "dl") ? T("Global download limit") : T("Global upload limit")}${alt ? T(" (alternative)") : ""}`,
+            label: T("KiB/s (0 = unlimited)"),
             value: String(Math.round((cur || 0) / 1024)),
             type: "number",
             inputmode: "numeric",
-            hint: alt ? "Los límites alternativos están activos." : ""
+            hint: alt ? T("Alternative speed limits are active.") : ""
         });
         if (v === null)
             return;
         const bytes = Math.round(Math.max(0, Number(v) || 0) * 1024);
-        if (await setPrefs({ [key]: bytes }, bytes ? `Límite: ${fmtSpeed(bytes)}` : "Sin límite"))
+        if (await setPrefs({ [key]: bytes }, bytes ? T("Limit: {0}", fmtSpeed(bytes)) : T("No limit")))
             kickSync();
     };
 
@@ -1591,8 +1599,8 @@
         const s = S.server;
         TV.dl.textContent = fmtSpeed(s.dl_info_speed);
         TV.up.textContent = fmtSpeed(s.up_info_speed);
-        TV.dlSub.textContent = (s.dl_rate_limit > 0) ? `Límite ${fmtSpeed(s.dl_rate_limit)}` : `Sesión ${fmtBytes(s.dl_info_data)}`;
-        TV.upSub.textContent = (s.up_rate_limit > 0) ? `Límite ${fmtSpeed(s.up_rate_limit)}` : `Sesión ${fmtBytes(s.up_info_data)}`;
+        TV.dlSub.textContent = (s.dl_rate_limit > 0) ? T("Limit {0}", fmtSpeed(s.dl_rate_limit)) : T("Session {0}", fmtBytes(s.dl_info_data));
+        TV.upSub.textContent = (s.up_rate_limit > 0) ? T("Limit {0}", fmtSpeed(s.up_rate_limit)) : T("Session {0}", fmtBytes(s.up_info_data));
         TV.alt.classList.toggle("on", !!s.use_alt_speed_limits);
         TV.free.textContent = (s.free_space_on_disk >= 0) ? fmtBytes(s.free_space_on_disk) : "—";
         TV.disk.classList.toggle("low", (s.free_space_on_disk >= 0) && (s.free_space_on_disk < 10 * 1024 ** 3));
@@ -1601,7 +1609,7 @@
 
     const cardCreate = (t) => {
         const el = h(`<article class="tcard">
-            <div class="row1"><span class="check">${ic("check", "xs")}</span><div class="name"></div><button class="quick" aria-label="Iniciar o detener"></button></div>
+            <div class="row1"><span class="check">${ic("check", "xs")}</span><div class="name"></div><button class="quick" aria-label="${T("Start or stop")}"></button></div>
             <div class="bar"><i></i></div>
             <div class="meta"></div>
             <div class="tags"></div>
@@ -1621,9 +1629,9 @@
         const done = t.progress >= 1;
         parts.push(`<span>${fmtPct(t.progress)}</span>`);
         if (!t.size && (t.has_metadata === false || !t.total_size))
-            parts.push("<span>Sin metadatos</span>");
+            parts.push("<span>" + T("No metadata") + "</span>");
         else
-            parts.push(`<span>${done ? fmtBytes(t.size) : `${fmtBytes(t.completed ?? (t.size * t.progress))} de ${fmtBytes(t.size)}`}</span>`);
+            parts.push(`<span>${done ? fmtBytes(t.size) : T("{0} of {1}", fmtBytes(t.completed ?? (t.size * t.progress)), fmtBytes(t.size))}</span>`);
         if (t.dlspeed > 0)
             parts.push(`<span class="sp-dl">${ic("down", "xs")}${fmtSpeed(t.dlspeed)}</span>`);
         if (t.upspeed > 0)
@@ -1640,7 +1648,7 @@
     const tagsHtml = (t) => {
         const out = [];
         if (t.force_start)
-            out.push(`<span class="tag">${"Forzado"}</span>`);
+            out.push(`<span class="tag">${T("Forced")}</span>`);
         if (t.category)
             out.push(`<span class="tag cat">${esc(t.category)}</span>`);
         for (const tg of tagsOf(t))
@@ -1664,7 +1672,7 @@
         if (el._quick.dataset.q !== q) {
             el._quick.dataset.q = q;
             el._quick.innerHTML = ic(q, "sm");
-            el._quick.setAttribute("aria-label", isStopped(t) ? "Iniciar" : "Detener");
+            el._quick.setAttribute("aria-label", isStopped(t) ? T("Start") : T("Stop"));
         }
         el._bar.style.width = `${Math.min(100, t.progress * 100)}%`;
         el._meta.innerHTML = metaHtml(t);
@@ -1709,11 +1717,11 @@
         TV.filterBtn.classList.toggle("on", extra);
         const filterDesc = [];
         if (f.category !== null)
-            filterDesc.push((f.category === "") ? "sin categoría" : f.category);
+            filterDesc.push((f.category === "") ? T("no category") : f.category);
         if (f.tag !== null)
-            filterDesc.push((f.tag === "") ? "sin etiqueta" : `#${f.tag}`);
+            filterDesc.push((f.tag === "") ? T("no tag") : `#${f.tag}`);
         if (f.tracker !== null)
-            filterDesc.push((f.tracker === "") ? "sin tracker" : f.tracker);
+            filterDesc.push((f.tracker === "") ? T("no tracker") : f.tracker);
         TV.count.textContent = `${list.length} ${(list.length === 1) ? "torrent" : "torrents"}${filterDesc.length ? ` · ${filterDesc.join(" · ")}` : ""}`;
         const sortDef = SORTS.find(([k]) => k === S.sort.key);
         TV.sortLbl.textContent = `${sortDef ? sortDef[1] : ""} ${(S.sort.dir > 0) ? "↑" : "↓"}`;
@@ -1725,8 +1733,8 @@
         else if (!list.length) {
             const none = !all.length;
             TV.empty.innerHTML = none
-                ? `${ic("layers")}<b>Todavía no hay torrents</b><span>Toca el botón + para agregar un enlace magnet o un archivo .torrent.</span>`
-                : `${ic("search")}<b>Nada por aquí</b><span>Ningún torrent coincide con los filtros.</span>${extra || S.q ? "<button class=\"sec-btn\" data-clear>Quitar filtros</button>" : ""}`;
+                ? `${ic("layers")}<b>${T("No torrents yet")}</b><span>${T("Tap the + button to add a magnet link or a .torrent file.")}</span>`
+                : `${ic("search")}<b>${T("Nothing here")}</b><span>${T("No torrent matches the filters.")}</span>${extra || S.q ? "<button class=\"sec-btn\" data-clear>" + T("Clear filters") + "</button>" : ""}`;
             TV.empty.querySelector("[data-clear]")?.addEventListener("click", () => {
                 Object.assign(S.filter, { status: "all", category: null, tag: null, tracker: null });
                 S.q = "";
@@ -1742,13 +1750,13 @@
 
         if (S.selecting) {
             const n = S.sel.size;
-            TV.selCount.textContent = `${n} ${(n === 1) ? "seleccionado" : "seleccionados"}`;
+            TV.selCount.textContent = ((n === 1) ? T("{0} selected§one", n) : T("{0} selected", n));
         }
     };
 
     const filterSheet = () => {
         const body = h("<div></div>");
-        const sheet = openSheet({ title: "Filtros", body });
+        const sheet = openSheet({ title: T("Filters"), body });
         const render = () => {
             const all = [...S.torrents.values()];
             const f = S.filter;
@@ -1768,21 +1776,21 @@
                 return g;
             };
             body.innerHTML = "";
-            const catEntries = [[null, "Todas", all.length, "layers"], ["", "Sin categoría", all.filter((t) => !t.category).length, "x"]];
+            const catEntries = [[null, T("All§f"), all.length, "layers"], ["", T("No category"), all.filter((t) => !t.category).length, "x"]];
             for (const c of Object.keys(S.categories).sort(collator.compare)) {
                 const n = all.filter((t) => (S.prefs.use_subcategories ? (`${t.category}/`).startsWith(`${c}/`) : (t.category === c))).length;
                 catEntries.push([c, c, n, "folder"]);
             }
-            body.append(section("Categorías", "category", catEntries));
-            const tagEntries = [[null, "Todas", all.length, "layers"], ["", "Sin etiqueta", all.filter((t) => !t.tags).length, "x"]];
+            body.append(section(T("Categories"), "category", catEntries));
+            const tagEntries = [[null, T("All§f"), all.length, "layers"], ["", T("No tag"), all.filter((t) => !t.tags).length, "x"]];
             for (const tg of [...S.tags].sort(collator.compare))
                 tagEntries.push([tg, tg, all.filter((t) => tagsOf(t).includes(tg)).length, "tag"]);
-            body.append(section("Etiquetas", "tag", tagEntries));
-            const trEntries = [[null, "Todos", all.length, "layers"], ["", "Sin tracker", all.filter((t) => t.trackers_count === 0).length, "x"]];
+            body.append(section(T("Tags"), "tag", tagEntries));
+            const trEntries = [[null, T("All"), all.length, "layers"], ["", T("No tracker"), all.filter((t) => t.trackers_count === 0).length, "x"]];
             for (const host of [...trackerHostMap.keys()].sort(collator.compare))
                 trEntries.push([host, host, trackerHostMap.get(host).size, "radio"]);
             body.append(section("Trackers", "tracker", trEntries));
-            const btns = h(`<div class="btns" style="margin-top:14px"><button class="btn" data-ref="reset">Quitar filtros</button><button class="btn primary" data-ref="done">Listo</button></div>`);
+            const btns = h(`<div class="btns" style="margin-top:14px"><button class="btn" data-ref="reset">${T("Clear filters")}</button><button class="btn primary" data-ref="done">${T("Done")}</button></div>`);
             const r = refs(btns);
             r.reset.addEventListener("click", () => {
                 Object.assign(f, { category: null, tag: null, tracker: null });
@@ -1798,12 +1806,12 @@
 
     const sortSheet = () => {
         const body = h("<div class=\"group optlist\"></div>");
-        const sheet = openSheet({ title: "Ordenar por", subtitle: "Toca de nuevo para invertir el orden", body });
+        const sheet = openSheet({ title: T("Sort by"), subtitle: T("Tap again to reverse the order"), body });
         const render = () => {
             body.innerHTML = "";
             for (const [key, label, defDir] of SORTS) {
                 const on = S.sort.key === key;
-                const b = h(`<button class="item"><span class="lbl">${esc(label)}</span>${on ? `<span class="val">${(S.sort.dir > 0) ? "Ascendente ↑" : "Descendente ↓"}</span>` : ""}<span class="radio ${on ? "on" : ""}"></span></button>`);
+                const b = h(`<button class="item"><span class="lbl">${esc(label)}</span>${on ? `<span class="val">${(S.sort.dir > 0) ? T("Ascending ↑") : T("Descending ↓")}</span>` : ""}<span class="radio ${on ? "on" : ""}"></span></button>`);
                 b.addEventListener("click", () => {
                     if (S.sort.key === key)
                         S.sort.dir *= -1;
@@ -1838,8 +1846,8 @@
         let peers = {};
 
         const page = openPage({
-            title: "Detalles",
-            actions: `<button class="icon-btn" data-ref="more" aria-label="Más acciones">${ic("more")}</button>`,
+            title: T("Details"),
+            actions: `<button class="icon-btn" data-ref="more" aria-label="${T("More actions")}">${ic("more")}</button>`,
             onClose: () => {
                 alive = false;
                 clearTimeout(timer);
@@ -1859,15 +1867,15 @@
             </div>
             <div class="actions">
                 <button data-a="toggle" class="primary" data-ref="toggleBtn"></button>
-                <button data-a="reannounce">${ic("megaphone")}Reanunciar</button>
+                <button data-a="reannounce">${ic("megaphone")}${T("Reannounce")}</button>
                 <button data-a="magnet">${ic("magnet")}Magnet</button>
-                <button data-a="delete" class="danger">${ic("trash")}Eliminar</button>
+                <button data-a="delete" class="danger">${ic("trash")}${T("Delete")}</button>
             </div>
             <div class="seg" data-ref="seg">
                 <button data-t="info">Info</button>
-                <button data-t="files">Archivos</button>
+                <button data-t="files">${T("Files")}</button>
                 <button data-t="trackers">Trackers</button>
-                <button data-t="peers">Pares</button>
+                <button data-t="peers">${T("Peers")}</button>
             </div>
             <div data-ref="body"><div class="fetching"><span class="spinner"></span></div></div>`;
         Object.assign(P, refs(P.main));
@@ -1880,7 +1888,7 @@
                 return;
             const a = b.dataset.a;
             if (a === "magnet")
-                copyText(t.magnet_uri, "Enlace magnet copiado");
+                copyText(t.magnet_uri, T("Magnet link copied"));
             else if (a === "delete")
                 actions.delete([hash], () => page.close());
             else
@@ -1910,7 +1918,7 @@
             R.state.textContent = st.label;
             R.name.textContent = t.name;
             R.pct.textContent = fmtPct(t.progress);
-            R.sizeTxt.textContent = (t.progress >= 1) ? `de ${fmtBytes(t.size)}` : `${fmtBytes(t.completed ?? 0)} de ${fmtBytes(t.size)}`;
+            R.sizeTxt.textContent = (t.progress >= 1) ? T("of {0}", fmtBytes(t.size)) : T("{0} of {1}", fmtBytes(t.completed ?? 0), fmtBytes(t.size));
             R.bar.style.width = `${Math.min(100, t.progress * 100)}%`;
             const m = [];
             m.push(`<span class="sp-dl">${ic("down", "xs")}${fmtSpeed(t.dlspeed)}</span>`);
@@ -1927,14 +1935,14 @@
             const want = stopped ? "play" : "pause";
             if (R.toggleBtn.dataset.q !== want) {
                 R.toggleBtn.dataset.q = want;
-                R.toggleBtn.innerHTML = `${ic(want)}${stopped ? "Iniciar" : "Detener"}`;
+                R.toggleBtn.innerHTML = `${ic(want)}${stopped ? T("Start") : T("Stop")}`;
             }
         };
 
         const unsub = onSync(() => {
             if (!S.torrents.has(hash)) {
                 if (alive) {
-                    toast("El torrent ya no existe");
+                    toast(T("The torrent no longer exists"));
                     page.close();
                 }
                 return;
@@ -1948,43 +1956,43 @@
         const renderInfo = () => {
             const p = props || {};
             const html = `
-                <div class="group-title">Transferencia</div>
+                <div class="group-title">${T("Transfer")}</div>
                 <div class="group">
-                    ${kvItem("Descargado", `${fmtBytes(p.total_downloaded)} (sesión ${fmtBytes(p.total_downloaded_session)})`)}
-                    ${kvItem("Subido", `${fmtBytes(p.total_uploaded)} (sesión ${fmtBytes(p.total_uploaded_session)})`)}
+                    ${kvItem(T("Downloaded"), T("{0} (session {1})", fmtBytes(p.total_downloaded), fmtBytes(p.total_downloaded_session)))}
+                    ${kvItem(T("Uploaded"), T("{0} (session {1})", fmtBytes(p.total_uploaded), fmtBytes(p.total_uploaded_session)))}
                     ${kvItem("Ratio", fmtRatio(p.share_ratio ?? t.ratio))}
-                    ${kvItem("Velocidad media", `↓ ${fmtSpeed(p.dl_speed_avg)} · ↑ ${fmtSpeed(p.up_speed_avg)}`)}
-                    ${kvItem("Tiempo activo", fmtDur(p.time_elapsed))}
-                    ${kvItem("Tiempo sembrando", fmtDur(p.seeding_time))}
-                    ${kvItem("Conexiones", `${p.nb_connections ?? "—"} (máx. ${(p.nb_connections_limit > 0) ? p.nb_connections_limit : "∞"})`)}
-                    ${kvItem("Semillas", `${p.seeds ?? "—"} de ${p.seeds_total ?? "—"}`)}
-                    ${kvItem("Pares", `${p.peers ?? "—"} de ${p.peers_total ?? "—"}`)}
-                    ${kvItem("Disponibilidad", (t.availability >= 0) ? nf(t.availability, 3) : "—")}
-                    ${kvItem("Desperdiciado", fmtBytes(p.total_wasted))}
-                    ${kvItem("Próximo anuncio", fmtDur(p.reannounce))}
-                    ${kvItem("Visto completo", fmtDate(p.last_seen))}
-                    ${kvItem("Piezas", `${p.pieces_num ?? "—"} × ${fmtBytes(p.piece_size)} (tienes ${p.pieces_have ?? "—"})`)}
+                    ${kvItem(T("Average speed"), `↓ ${fmtSpeed(p.dl_speed_avg)} · ↑ ${fmtSpeed(p.up_speed_avg)}`)}
+                    ${kvItem(T("Time active"), fmtDur(p.time_elapsed))}
+                    ${kvItem(T("Seeding time"), fmtDur(p.seeding_time))}
+                    ${kvItem(T("Connections"), `${p.nb_connections ?? "—"} (${T("max.")} ${(p.nb_connections_limit > 0) ? p.nb_connections_limit : "∞"})`)}
+                    ${kvItem(T("Seeds"), `${p.seeds ?? "—"} ${T("of")} ${p.seeds_total ?? "—"}`)}
+                    ${kvItem(T("Peers"), `${p.peers ?? "—"} ${T("of")} ${p.peers_total ?? "—"}`)}
+                    ${kvItem(T("Availability"), (t.availability >= 0) ? nf(t.availability, 3) : "—")}
+                    ${kvItem(T("Wasted"), fmtBytes(p.total_wasted))}
+                    ${kvItem(T("Next announce"), fmtDur(p.reannounce))}
+                    ${kvItem(T("Last seen complete"), fmtDate(p.last_seen))}
+                    ${kvItem(T("Pieces"), `${p.pieces_num ?? "—"} × ${fmtBytes(p.piece_size)} (${T("have {0}", p.pieces_have ?? "—")})`)}
                 </div>
-                <div class="group-title">Límites</div>
+                <div class="group-title">${T("Limits")}</div>
                 <div class="group">
-                    <button class="item tap" data-act="dl"><span class="lbl">Límite de bajada</span><span class="val">${esc(fmtLimit(t.dl_limit))}</span><span class="chev">${ic("chev", "sm")}</span></button>
-                    <button class="item tap" data-act="up"><span class="lbl">Límite de subida</span><span class="val">${esc(fmtLimit(t.up_limit))}</span><span class="chev">${ic("chev", "sm")}</span></button>
-                    <button class="item tap" data-act="share"><span class="lbl">Límites de siembra</span><span class="val">${esc((t.ratio_limit === -2) ? "Global" : ((t.ratio_limit === -1) ? "Sin límite" : `Ratio ${nf(t.ratio_limit, 2)}`))}</span><span class="chev">${ic("chev", "sm")}</span></button>
+                    <button class="item tap" data-act="dl"><span class="lbl">${T("Download limit")}</span><span class="val">${esc(fmtLimit(t.dl_limit))}</span><span class="chev">${ic("chev", "sm")}</span></button>
+                    <button class="item tap" data-act="up"><span class="lbl">${T("Upload limit")}</span><span class="val">${esc(fmtLimit(t.up_limit))}</span><span class="chev">${ic("chev", "sm")}</span></button>
+                    <button class="item tap" data-act="share"><span class="lbl">${T("Share limits")}</span><span class="val">${esc((t.ratio_limit === -2) ? "Global" : ((t.ratio_limit === -1) ? T("No limit") : `Ratio ${nf(t.ratio_limit, 2)}`))}</span><span class="chev">${ic("chev", "sm")}</span></button>
                 </div>
-                <div class="group-title">Información</div>
+                <div class="group-title">${T("Information")}</div>
                 <div class="group">
-                    ${kvItem("Tamaño total", fmtBytes(p.total_size ?? t.total_size))}
-                    ${kvItem("Agregado", fmtDate(p.addition_date ?? t.added_on))}
-                    ${kvItem("Completado", fmtDate(p.completion_date ?? t.completion_on))}
-                    ${kvItem("Creado", fmtDate(p.creation_date))}
-                    ${p.created_by ? kvItem("Creado con", p.created_by) : ""}
-                    ${kvItem("Guardado en", p.save_path ?? t.save_path, { copy: p.save_path ?? t.save_path, mono: true })}
-                    ${p.download_path ? kvItem("Ruta de incompletos", p.download_path, { copy: p.download_path, mono: true }) : ""}
-                    ${kvItem("Categoría", t.category || "Ninguna")}
-                    ${kvItem("Privado", p.is_private ? "Sí" : "No")}
+                    ${kvItem(T("Total size"), fmtBytes(p.total_size ?? t.total_size))}
+                    ${kvItem(T("Added"), fmtDate(p.addition_date ?? t.added_on))}
+                    ${kvItem(T("Completed"), fmtDate(p.completion_date ?? t.completion_on))}
+                    ${kvItem(T("Created"), fmtDate(p.creation_date))}
+                    ${p.created_by ? kvItem(T("Created by"), p.created_by) : ""}
+                    ${kvItem(T("Saved to"), p.save_path ?? t.save_path, { copy: p.save_path ?? t.save_path, mono: true })}
+                    ${p.download_path ? kvItem(T("Incomplete path"), p.download_path, { copy: p.download_path, mono: true }) : ""}
+                    ${kvItem(T("Category"), t.category || T("None"))}
+                    ${kvItem(T("Private"), p.is_private ? T("Yes") : "No")}
                     ${(p.infohash_v1 || t.infohash_v1) ? kvItem("Hash v1", p.infohash_v1 || t.infohash_v1, { copy: p.infohash_v1 || t.infohash_v1, mono: true }) : ""}
                     ${(p.infohash_v2 || t.infohash_v2) ? kvItem("Hash v2", p.infohash_v2 || t.infohash_v2, { copy: p.infohash_v2 || t.infohash_v2, mono: true }) : ""}
-                    ${p.comment ? `<div class="item"><span class="lbl">Comentario<small>${esc(plainText(p.comment))}</small></span></div>` : ""}
+                    ${p.comment ? `<div class="item"><span class="lbl">${T("Comment")}<small>${esc(plainText(p.comment))}</small></span></div>` : ""}
                 </div>`;
             const sc = P.main.scrollTop;
             R.body.innerHTML = html;
@@ -2043,7 +2051,7 @@
         };
 
         // ---------- Archivos ----------
-        const PRIO = { 0: "No descargar", 1: "Normal", 6: "Alta", 7: "Máxima" };
+        const PRIO = { 0: T("Do not download"), 1: "Normal", 6: T("High"), 7: T("Maximum") };
         const buildTree = (list) => {
             const root = { name: "", path: "", children: new Map(), files: [] };
             for (const f of list) {
@@ -2143,7 +2151,7 @@
             el.querySelector(".mini i").style.width = `${progress * 100}%`;
             const pr = el.querySelector(".prio");
             pr.className = `prio ${(cbState === "") ? "p0" : prioCls}`;
-            pr.textContent = (cbState === "") ? "Omitido" : prioTxt;
+            pr.textContent = (cbState === "") ? T("Skipped") : prioTxt;
             el.querySelector(".tw").classList.toggle("hidden", !row.dir);
         };
         let fileRows = new Map();
@@ -2152,7 +2160,7 @@
                 return;
             let wrap = R.body.querySelector("[data-files]");
             if (!wrap) {
-                R.body.innerHTML = `<div class="tools"><label class="searchbar">${ic("search", "sm")}<input type="search" data-fq placeholder="Filtrar archivos" autocapitalize="none"></label><button class="sec-btn" data-allf>${ic("checkAll", "sm")}Todos</button></div><div class="group" data-files></div>`;
+                R.body.innerHTML = `<div class="tools"><label class="searchbar">${ic("search", "sm")}<input type="search" data-fq placeholder="${T("Filter files")}" autocapitalize="none"></label><button class="sec-btn" data-allf>${ic("checkAll", "sm")}${T("All")}</button></div><div class="group" data-files></div>`;
                 wrap = R.body.querySelector("[data-files]");
                 R.body.querySelector("[data-fq]").addEventListener("input", renderFiles);
                 R.body.querySelector("[data-allf]").addEventListener("click", () => {
@@ -2173,7 +2181,7 @@
             fileRows = new Map(rows.map((r) => [r.key, r]));
             if (!rows.length) {
                 wrap._k = null;
-                wrap.innerHTML = `<div class="item"><span class="lbl" style="color:var(--text-faint)">${q ? "Ningún archivo coincide" : "Sin archivos todavía (esperando metadatos)"}</span></div>`;
+                wrap.innerHTML = `<div class="item"><span class="lbl" style="color:var(--text-faint)">${q ? T("No file matches") : T("No files yet (waiting for metadata)")}</span></div>`;
                 return;
             }
             if (!wrap._k)
@@ -2198,11 +2206,11 @@
             const cur = isDir ? ((row.node.agg.prios.size === 1) ? [...row.node.agg.prios][0] : null) : row.file.priority;
             menuSheet({
                 title: path.split("/").pop(),
-                subtitle: isDir ? `Carpeta · ${fmtBytes(row.node.agg.size)}` : `${fmtBytes(row.file.size)} · ${fmtPct(row.file.progress)}${(row.file.availability >= 0) ? ` · disp. ${nf(row.file.availability, 2)}` : ""}`,
+                subtitle: isDir ? T("Folder · {0}", fmtBytes(row.node.agg.size)) : `${fmtBytes(row.file.size)} · ${fmtPct(row.file.progress)}${(row.file.availability >= 0) ? T(" · avail. {0}", nf(row.file.availability, 2)) : ""}`,
                 groups: [
                     {
-                        title: "Prioridad",
-                        items: [[0, "No descargar", "x"], [1, "Normal", "list"], [6, "Alta", "up"], [7, "Máxima", "zap"]].map(([p, label, icon]) => ({
+                        title: T("Priority"),
+                        items: [[0, T("Do not download"), "x"], [1, "Normal", "list"], [6, T("High"), "up"], [7, T("Maximum"), "zap"]].map(([p, label, icon]) => ({
                             icon,
                             label,
                             value: cur === p,
@@ -2213,19 +2221,19 @@
                         items: [
                             {
                                 icon: "edit",
-                                label: isDir ? "Renombrar carpeta…" : "Renombrar archivo…",
+                                label: isDir ? T("Rename folder…") : T("Rename file…"),
                                 onClick: async () => {
                                     const base = path.split("/").pop();
-                                    const v = await promptSheet({ title: isDir ? "Renombrar carpeta" : "Renombrar archivo", label: "Nuevo nombre", value: base });
+                                    const v = await promptSheet({ title: isDir ? T("Rename folder") : T("Rename file"), label: T("New name"), value: base });
                                     if (!v || !v.trim() || (v.trim() === base))
                                         return;
                                     const parent = path.includes("/") ? path.slice(0, path.lastIndexOf("/") + 1) : "";
-                                    const ok = await run(api.post(isDir ? "torrents/renameFolder" : "torrents/renameFile", { hash, oldPath: path, newPath: parent + v.trim() }), "Renombrado");
+                                    const ok = await run(api.post(isDir ? "torrents/renameFolder" : "torrents/renameFile", { hash, oldPath: path, newPath: parent + v.trim() }), T("Renamed"));
                                     if (ok !== null)
                                         refresh(true);
                                 }
                             },
-                            { icon: "copy", label: "Copiar ruta", onClick: () => copyText(path) }
+                            { icon: "copy", label: T("Copy path"), onClick: () => copyText(path) }
                         ]
                     }
                 ]
@@ -2265,41 +2273,41 @@
         });
 
         // ---------- Trackers ----------
-        const TSTAT = { 0: ["Desactivado", ""], 1: ["Sin contactar", "wait"], 2: ["Funcionando", "ok"], 3: ["Actualizando…", "upd"], 4: ["No funciona", "bad"] };
+        const TSTAT = { 0: [T("Disabled"), ""], 1: [T("Not contacted"), "wait"], 2: [T("Working"), "ok"], 3: [T("Updating…"), "upd"], 4: [T("Not working"), "bad"] };
         let trackers = [];
         let webseeds = [];
         const renderTrackers = () => {
             const special = (u) => u.startsWith("** [");
             R.body.innerHTML = `
-                <div class="tools"><span style="flex:1;color:var(--text-faint);font-size:13px">${trackers.filter((x) => !special(x.url)).length} trackers</span><button class="sec-btn" data-addtr>${ic("plus", "sm")}Agregar</button></div>
+                <div class="tools"><span style="flex:1;color:var(--text-faint);font-size:13px">${trackers.filter((x) => !special(x.url)).length} trackers</span><button class="sec-btn" data-addtr>${ic("plus", "sm")}${T("Add")}</button></div>
                 <div class="group">${trackers.map((tr) => {
                     const [label, cls] = TSTAT[tr.status] || ["—", ""];
                     const name = special(tr.url) ? tr.url.replace(/\*\*\s*\[|\]\s*\*\*/g, "").trim() : tr.url;
                     return `<div class="trow" ${special(tr.url) ? "" : `data-url="${esc(tr.url)}"`}>
                         <div class="url">${esc(name)}</div>
-                        <small><span class="tstat ${cls}">${esc(label)}</span>${special(tr.url) ? "" : `<span>Nivel ${tr.tier}</span>`}<span>${ic("users", "xs")} ${(tr.num_peers >= 0) ? tr.num_peers : "—"}</span><span>Semillas ${(tr.num_seeds >= 0) ? tr.num_seeds : "—"}</span><span>Leechers ${(tr.num_leeches >= 0) ? tr.num_leeches : "—"}</span>${(tr.num_downloaded >= 0) ? `<span>Descargas ${tr.num_downloaded}</span>` : ""}</small>
+                        <small><span class="tstat ${cls}">${esc(label)}</span>${special(tr.url) ? "" : `<span>${T("Tier {0}", tr.tier)}</span>`}<span>${ic("users", "xs")} ${(tr.num_peers >= 0) ? tr.num_peers : "—"}</span><span>${T("Seeds")} ${(tr.num_seeds >= 0) ? tr.num_seeds : "—"}</span><span>Leechers ${(tr.num_leeches >= 0) ? tr.num_leeches : "—"}</span>${(tr.num_downloaded >= 0) ? `<span>${T("Downloads")} ${tr.num_downloaded}</span>` : ""}</small>
                         ${tr.msg ? `<div class="msg">${esc(tr.msg)}</div>` : ""}
                     </div>`;
                 }).join("")}</div>
-                <div class="group-title">Semillas web</div>
-                <div class="group">${webseeds.length ? webseeds.map((w) => `<div class="trow" data-ws="${esc(w.url)}"><div class="url">${esc(w.url)}</div></div>`).join("") : "<div class=\"item\"><span class=\"lbl\" style=\"color:var(--text-faint)\">Ninguna</span></div>"}</div>
-                <button class="sec-btn" data-addws>${ic("plus", "sm")}Agregar semillas web</button>`;
+                <div class="group-title">${T("Web seeds")}</div>
+                <div class="group">${webseeds.length ? webseeds.map((w) => `<div class="trow" data-ws="${esc(w.url)}"><div class="url">${esc(w.url)}</div></div>`).join("") : "<div class=\"item\"><span class=\"lbl\" style=\"color:var(--text-faint)\">" + T("None") + "</span></div>"}</div>
+                <button class="sec-btn" data-addws>${ic("plus", "sm")}${T("Add web seeds")}</button>`;
         };
         R.body.addEventListener("click", async (e) => {
             if (tab !== "trackers")
                 return;
             if (e.target.closest("[data-addtr]")) {
-                const v = await promptSheet({ title: "Agregar trackers", label: "Un tracker por línea", multiline: true, placeholder: "udp://tracker.ejemplo.org:1337/announce", ok: "Agregar" });
+                const v = await promptSheet({ title: T("Add trackers"), label: T("One tracker per line"), multiline: true, placeholder: T("udp://tracker.example.org:1337/announce"), ok: T("Add") });
                 if (v && v.trim()) {
-                    await run(api.post("torrents/addTrackers", { hash, urls: v.trim() }), "Trackers agregados");
+                    await run(api.post("torrents/addTrackers", { hash, urls: v.trim() }), T("Trackers added"));
                     refresh(true);
                 }
                 return;
             }
             if (e.target.closest("[data-addws]")) {
-                const v = await promptSheet({ title: "Agregar semillas web", label: "Una URL por línea", multiline: true, placeholder: "https://…", ok: "Agregar" });
+                const v = await promptSheet({ title: T("Add web seeds"), label: T("One URL per line"), multiline: true, placeholder: "https://…", ok: T("Add") });
                 if (v && v.trim()) {
-                    await run(api.post("torrents/addWebSeeds", { hash, urls: v.trim().split("\n").map((x) => x.trim()).filter(Boolean).join("|") }), "Semillas web agregadas");
+                    await run(api.post("torrents/addWebSeeds", { hash, urls: v.trim().split("\n").map((x) => x.trim()).filter(Boolean).join("|") }), T("Web seeds added"));
                     refresh(true);
                 }
                 return;
@@ -2308,23 +2316,23 @@
             if (ws) {
                 const url = ws.dataset.ws;
                 menuSheet({
-                    title: "Semilla web",
+                    title: T("Web seed"),
                     subtitle: url,
                     items: [
-                        { icon: "copy", label: "Copiar URL", onClick: () => copyText(url) },
+                        { icon: "copy", label: T("Copy URL"), onClick: () => copyText(url) },
                         {
                             icon: "edit",
-                            label: "Editar URL…",
+                            label: T("Edit URL…"),
                             onClick: async () => {
-                                const v = await promptSheet({ title: "Editar semilla web", value: url, type: "url" });
+                                const v = await promptSheet({ title: T("Edit web seed"), value: url, type: "url" });
                                 if (v && v.trim() && (v.trim() !== url)) {
-                                    await run(api.post("torrents/editWebSeed", { hash, origUrl: url, newUrl: v.trim() }), "Guardado");
+                                    await run(api.post("torrents/editWebSeed", { hash, origUrl: url, newUrl: v.trim() }), T("Saved"));
                                     refresh(true);
                                 }
                             }
                         },
-                        { icon: "trash", label: "Eliminar", danger: true, onClick: async () => {
-                            await run(api.post("torrents/removeWebSeeds", { hash, urls: url }), "Eliminada");
+                        { icon: "trash", label: T("Delete"), danger: true, onClick: async () => {
+                            await run(api.post("torrents/removeWebSeeds", { hash, urls: url }), T("Removed§f"));
                             refresh(true);
                         } }
                     ]
@@ -2339,24 +2347,24 @@
                 title: hostOf(url),
                 subtitle: url,
                 items: [
-                    { icon: "copy", label: "Copiar URL", onClick: () => copyText(url, "URL copiada") },
+                    { icon: "copy", label: T("Copy URL"), onClick: () => copyText(url, T("URL copied")) },
                     {
                         icon: "edit",
-                        label: "Editar URL…",
+                        label: T("Edit URL…"),
                         onClick: async () => {
-                            const v = await promptSheet({ title: "Editar tracker", value: url, type: "url" });
+                            const v = await promptSheet({ title: T("Edit tracker"), value: url, type: "url" });
                             if (v && v.trim() && (v.trim() !== url)) {
-                                await run(api.post("torrents/editTracker", { hash, origUrl: url, newUrl: v.trim() }), "Tracker actualizado");
+                                await run(api.post("torrents/editTracker", { hash, origUrl: url, newUrl: v.trim() }), T("Tracker updated"));
                                 refresh(true);
                             }
                         }
                     },
                     {
                         icon: "trash",
-                        label: "Eliminar tracker",
+                        label: T("Remove tracker"),
                         danger: true,
                         onClick: async () => {
-                            await run(api.post("torrents/removeTrackers", { hash, urls: url }), "Tracker eliminado");
+                            await run(api.post("torrents/removeTrackers", { hash, urls: url }), T("Tracker removed"));
                             refresh(true);
                         }
                     }
@@ -2376,25 +2384,25 @@
             el.querySelector(".flag").title = p.country || "";
             el.querySelector(".ip").textContent = p.key;
             el.querySelector(".prio").textContent = fmtPct(p.progress || 0);
-            el.querySelector("small").innerHTML = `<span>${esc(p.client || "Desconocido")}</span><span class="sp-dl" style="color:var(--c-dl)">↓ ${fmtSpeed(p.dl_speed)}</span><span style="color:var(--c-up)">↑ ${fmtSpeed(p.up_speed)}</span><span>${esc(p.connection || "")}</span>${p.flags ? `<span class="mono">${esc(p.flags)}</span>` : ""}`;
+            el.querySelector("small").innerHTML = `<span>${esc(p.client || T("Unknown"))}</span><span class="sp-dl" style="color:var(--c-dl)">↓ ${fmtSpeed(p.dl_speed)}</span><span style="color:var(--c-up)">↑ ${fmtSpeed(p.up_speed)}</span><span>${esc(p.connection || "")}</span>${p.flags ? `<span class="mono">${esc(p.flags)}</span>` : ""}`;
         };
         const renderPeers = () => {
             let wrap = R.body.querySelector("[data-peers]");
             if (!wrap) {
-                R.body.innerHTML = `<div class="tools"><span style="flex:1;color:var(--text-faint);font-size:13px" data-pc></span><button class="sec-btn" data-addpeer>${ic("plus", "sm")}Agregar</button></div><div class="group" data-peers></div>`;
+                R.body.innerHTML = `<div class="tools"><span style="flex:1;color:var(--text-faint);font-size:13px" data-pc></span><button class="sec-btn" data-addpeer>${ic("plus", "sm")}${T("Add")}</button></div><div class="group" data-peers></div>`;
                 wrap = R.body.querySelector("[data-peers]");
                 R.body.querySelector("[data-addpeer]").addEventListener("click", async () => {
-                    const v = await promptSheet({ title: "Agregar pares", label: "IP:puerto, uno por línea", multiline: true, placeholder: "192.168.1.10:6881", ok: "Agregar" });
+                    const v = await promptSheet({ title: T("Add peers"), label: T("IP:port, one per line"), multiline: true, placeholder: "192.168.1.10:6881", ok: T("Add") });
                     if (v && v.trim())
-                        run(api.post("torrents/addPeers", { hashes: hash, peers: v.trim().split("\n").map((x) => x.trim()).filter(Boolean).join("|") }), "Pares agregados");
+                        run(api.post("torrents/addPeers", { hashes: hash, peers: v.trim().split("\n").map((x) => x.trim()).filter(Boolean).join("|") }), T("Peers added"));
                 });
             }
             const list = Object.entries(peers).map(([key, p]) => Object.assign({ key }, p))
                 .sort((a, b) => ((b.dl_speed + b.up_speed) - (a.dl_speed + a.up_speed)) || collator.compare(a.key, b.key));
-            R.body.querySelector("[data-pc]").textContent = `${list.length} ${(list.length === 1) ? "par conectado" : "pares conectados"}`;
+            R.body.querySelector("[data-pc]").textContent = ((list.length === 1) ? T("{0} connected peer", list.length) : T("{0} connected peers", list.length));
             if (!list.length) {
                 wrap._k = null;
-                wrap.innerHTML = "<div class=\"item\"><span class=\"lbl\" style=\"color:var(--text-faint)\">No hay pares conectados</span></div>";
+                wrap.innerHTML = "<div class=\"item\"><span class=\"lbl\" style=\"color:var(--text-faint)\">" + T("No connected peers") + "</span></div>";
                 return;
             }
             if (!wrap._k)
@@ -2409,14 +2417,14 @@
                     title: key,
                     subtitle: [p.client, p.country].filter(Boolean).join(" · "),
                     items: [
-                        { icon: "copy", label: "Copiar IP:puerto", onClick: () => copyText(key) },
+                        { icon: "copy", label: T("Copy IP:port"), onClick: () => copyText(key) },
                         {
                             icon: "ban",
-                            label: "Bloquear permanentemente",
+                            label: T("Ban permanently"),
                             danger: true,
                             onClick: async () => {
-                                if (await confirmSheet({ title: "¿Bloquear este par?", message: key, ok: "Bloquear", danger: true })) {
-                                    await run(api.post("transfer/banPeers", { peers: key }), "Par bloqueado");
+                                if (await confirmSheet({ title: T("Ban this peer?"), message: key, ok: T("Ban"), danger: true })) {
+                                    await run(api.post("transfer/banPeers", { peers: key }), T("Peer banned"));
                                     delete peers[key];
                                     renderPeers();
                                 }
@@ -2472,7 +2480,7 @@
             }
             catch (e) {
                 if (e.status === 404) {
-                    toast("El torrent ya no existe");
+                    toast(T("The torrent no longer exists"));
                     page.close();
                     return;
                 }
@@ -2494,18 +2502,18 @@
         const el = h(`<section class="view hidden" data-view="search">
             <div class="safe-top"></div>
             <div class="main" data-ref="main">
-                <div class="head"><h1>Buscar</h1><button class="icon-btn" data-ref="pluginsBtn" aria-label="Complementos de búsqueda">${ic("plug")}</button></div>
+                <div class="head"><h1>${T("Search")}</h1><button class="icon-btn" data-ref="pluginsBtn" aria-label="${T("Search plugins")}">${ic("plug")}</button></div>
                 <form data-ref="form" style="margin-top:10px">
-                    <label class="searchbar" style="margin-top:0">${ic("search", "sm")}<input type="search" data-ref="q" placeholder="¿Qué quieres buscar?" autocomplete="off" enterkeyhint="search"><button class="icon-btn plain" data-ref="go" style="width:34px;height:34px" aria-label="Buscar">${ic("chev", "sm")}</button></label>
+                    <label class="searchbar" style="margin-top:0">${ic("search", "sm")}<input type="search" data-ref="q" placeholder="${T("What do you want to search for?")}" autocomplete="off" enterkeyhint="search"><button class="icon-btn plain" data-ref="go" style="width:34px;height:34px" aria-label="${T("Search")}">${ic("chev", "sm")}</button></label>
                     <div class="row2" style="margin-top:10px">
-                        <div class="field" style="margin:0"><select data-ref="cat"><option value="all">Todas</option></select></div>
-                        <div class="field" style="margin:0"><select data-ref="plug"><option value="enabled">Activos</option><option value="all">Todos</option></select></div>
+                        <div class="field" style="margin:0"><select data-ref="cat"><option value="all">${T("All§f")}</option></select></div>
+                        <div class="field" style="margin:0"><select data-ref="plug"><option value="enabled">${T("Enabled§plugins")}</option><option value="all">${T("All")}</option></select></div>
                     </div>
                 </form>
                 <div class="status-line hidden" data-ref="statusEl"></div>
                 <div class="tools hidden" data-ref="tools">
-                    <label class="searchbar">${ic("filter", "sm")}<input type="search" data-ref="fq" placeholder="Filtrar resultados"></label>
-                    <div class="field" style="margin:0;flex-shrink:0"><select data-ref="sort" style="width:auto"><option value="nbSeeders">Semillas</option><option value="fileSize">Tamaño</option><option value="nbLeechers">Pares</option><option value="fileName">Nombre</option></select></div>
+                    <label class="searchbar">${ic("filter", "sm")}<input type="search" data-ref="fq" placeholder="${T("Filter results")}"></label>
+                    <div class="field" style="margin:0;flex-shrink:0"><select data-ref="sort" style="width:auto"><option value="nbSeeders">${T("Seeds")}</option><option value="fileSize">${T("Size")}</option><option value="nbLeechers">${T("Peers")}</option><option value="fileName">${T("Name")}</option></select></div>
                 </div>
                 <div data-ref="list"></div>
             </div>
@@ -2526,11 +2534,11 @@
                     return;
                 menuSheet({
                     title: r.fileName,
-                    subtitle: `${fmtBytes(r.fileSize)} · ${r.nbSeeders} semillas · ${r.engineName || hostOf(r.siteUrl)}`,
+                    subtitle: `${fmtBytes(r.fileSize)} · ${r.nbSeeders} ${T("seeds")} · ${r.engineName || hostOf(r.siteUrl)}`,
                     items: [
-                        { icon: "download", label: "Descargar…", onClick: () => addSheet({ url: r.fileUrl }) },
-                        { icon: "globe", label: "Abrir página de descripción", hidden: !r.descrLink, onClick: () => window.open(r.descrLink, "_blank", "noopener") },
-                        { icon: "copy", label: "Copiar enlace", onClick: () => copyText(r.fileUrl, "Enlace copiado") }
+                        { icon: "download", label: T("Download…"), onClick: () => addSheet({ url: r.fileUrl }) },
+                        { icon: "globe", label: T("Open description page"), hidden: !r.descrLink, onClick: () => window.open(r.descrLink, "_blank", "noopener") },
+                        { icon: "copy", label: T("Copy link"), onClick: () => copyText(r.fileUrl, T("Link copied")) }
                     ]
                 });
             }
@@ -2555,10 +2563,10 @@
             }
         }
         const curCat = SV.cat.value;
-        SV.cat.innerHTML = `<option value="all">Todas</option>${[...cats].map(([id, name]) => `<option value="${esc(id)}">${esc(name)}</option>`).join("")}`;
+        SV.cat.innerHTML = `<option value="all">${T("All§f")}</option>${[...cats].map(([id, name]) => `<option value="${esc(id)}">${esc(name)}</option>`).join("")}`;
         SV.cat.value = cats.has(curCat) ? curCat : "all";
         const curPlug = SV.plug.value;
-        SV.plug.innerHTML = `<option value="enabled">Activos</option><option value="all">Todos</option>${SV.plugins.map((p) => `<option value="${esc(p.name)}">${esc(p.fullName)}</option>`).join("")}`;
+        SV.plug.innerHTML = `<option value="enabled">${T("Enabled§plugins")}</option><option value="all">${T("All")}</option>${SV.plugins.map((p) => `<option value="${esc(p.name)}">${esc(p.fullName)}</option>`).join("")}`;
         SV.plug.value = [...SV.plug.options].some((o) => o.value === curPlug) ? curPlug : "enabled";
         if (!SV.results.length && !SV.id)
             renderResults();
@@ -2584,7 +2592,7 @@
             pollSearch();
         }
         catch (e) {
-            toast(e.message || "No se pudo iniciar la búsqueda", "err");
+            toast(e.message || T("Could not start the search"), "err");
         }
     };
 
@@ -2609,8 +2617,8 @@
         const st = SV.statusEl;
         st.classList.toggle("hidden", !SV.id);
         st.innerHTML = running
-            ? `<span class="spinner"></span><span style="flex:1">Buscando… ${SV.results.length} resultados</span><button class="sec-btn" data-stop>${ic("x", "sm")}Detener</button>`
-            : `<span style="flex:1">${SV.results.length} resultados</span>`;
+            ? `<span class="spinner"></span><span style="flex:1">${T("Searching… {0} results", SV.results.length)}</span><button class="sec-btn" data-stop>${ic("x", "sm")}${T("Stop")}</button>`
+            : `<span style="flex:1">${T("{0} results", SV.results.length)}</span>`;
         st.querySelector("[data-stop]")?.addEventListener("click", async () => {
             await api.post("search/stop", { id: SV.id }).catch(() => {});
             SV.status = "Stopped";
@@ -2621,8 +2629,8 @@
         if (!SV.id) {
             const noPlugins = SV.plugins && !SV.plugins.length;
             SV.list.innerHTML = noPlugins
-                ? `<div class="empty">${ic("plug")}<b>No hay complementos de búsqueda</b><span>El buscador de qBittorrent necesita complementos (y Python instalado en el servidor).</span><button class="sec-btn" data-plugins>${ic("plus", "sm")}Instalar complementos</button></div>`
-                : `<div class="empty">${ic("search")}<b>Busca en tus sitios favoritos</b><span>Usa los complementos de búsqueda instalados en qBittorrent.</span></div>`;
+                ? `<div class="empty">${ic("plug")}<b>${T("No search plugins")}</b><span>${T("qBittorrent's search engine needs plugins (and Python installed on the server).")}</span><button class="sec-btn" data-plugins>${ic("plus", "sm")}${T("Install plugins")}</button></div>`
+                : `<div class="empty">${ic("search")}<b>${T("Search your favorite sites")}</b><span>${T("Uses the search plugins installed in qBittorrent.")}</span></div>`;
             SV.list.querySelector("[data-plugins]")?.addEventListener("click", pluginsPage);
             return;
         }
@@ -2635,7 +2643,7 @@
         list = list.slice(0, 400);
         if (!list.length) {
             SV.list._k = null;
-            SV.list.innerHTML = running ? "" : `<div class="empty">${ic("search")}<b>Sin resultados</b></div>`;
+            SV.list.innerHTML = running ? "" : `<div class="empty">${ic("search")}<b>${T("No results")}</b></div>`;
             return;
         }
         if (!SV.list._k)
@@ -2651,7 +2659,7 @@
     };
 
     const pluginsPage = () => {
-        const page = openPage({ title: "Complementos", actions: `<button class="icon-btn" data-ref="upd" aria-label="Actualizar complementos">${ic("refresh")}</button>` });
+        const page = openPage({ title: T("Plugins"), actions: `<button class="icon-btn" data-ref="upd" aria-label="${T("Update plugins")}">${ic("refresh")}</button>` });
         const render = async () => {
             await loadPlugins();
             if (page.closed)
@@ -2661,36 +2669,36 @@
                     <div class="item" data-p="${esc(p.name)}">
                         <span class="lbl">${esc(p.fullName)}<small>v${esc(p.version)} · ${esc(hostOf(p.url))}</small></span>
                         <span class="switch"><input type="checkbox" data-en="${esc(p.name)}" ${p.enabled ? "checked" : ""}><i></i></span>
-                        <button class="icon-btn plain" data-del="${esc(p.name)}" aria-label="Desinstalar">${ic("trash", "sm")}</button>
-                    </div>`).join("") : "<div class=\"item\"><span class=\"lbl\" style=\"color:var(--text-faint)\">No hay complementos instalados</span></div>"}
+                        <button class="icon-btn plain" data-del="${esc(p.name)}" aria-label="${T("Uninstall")}">${ic("trash", "sm")}</button>
+                    </div>`).join("") : "<div class=\"item\"><span class=\"lbl\" style=\"color:var(--text-faint)\">" + T("No plugins installed") + "</span></div>"}
                 </div>
-                <button class="btn primary" data-install>${ic("plus", "sm")} Instalar desde URL</button>
-                <p class="note" style="margin-top:12px">Encuentra complementos en github.com/qbittorrent/search-plugins/wiki. Requiere Python en el servidor.</p>`;
+                <button class="btn primary" data-install>${ic("plus", "sm")} ${T("Install from URL")}</button>
+                <p class="note" style="margin-top:12px">${T("Find plugins at github.com/qbittorrent/search-plugins/wiki. Requires Python on the server.")}</p>`;
         };
         page.r.main.addEventListener("change", async (e) => {
             const cb = e.target.closest("[data-en]");
             if (cb)
-                await run(api.post("search/enablePlugin", { names: cb.dataset.en, enable: String(cb.checked) }), cb.checked ? "Activado" : "Desactivado");
+                await run(api.post("search/enablePlugin", { names: cb.dataset.en, enable: String(cb.checked) }), cb.checked ? T("Enabled") : T("Disabled"));
         });
         page.r.main.addEventListener("click", async (e) => {
             const del = e.target.closest("[data-del]");
             if (del) {
-                if (await confirmSheet({ title: "¿Desinstalar complemento?", message: del.dataset.del, ok: "Desinstalar", danger: true })) {
-                    await run(api.post("search/uninstallPlugin", { names: del.dataset.del }), "Desinstalado");
+                if (await confirmSheet({ title: T("Uninstall plugin?"), message: del.dataset.del, ok: T("Uninstall"), danger: true })) {
+                    await run(api.post("search/uninstallPlugin", { names: del.dataset.del }), T("Uninstalled"));
                     setTimeout(render, 800);
                 }
                 return;
             }
             if (e.target.closest("[data-install]")) {
-                const v = await promptSheet({ title: "Instalar complemento", label: "URL o ruta del archivo .py", type: "url", placeholder: "https://…/plugin.py", ok: "Instalar" });
+                const v = await promptSheet({ title: T("Install plugin"), label: T("URL or path of the .py file"), type: "url", placeholder: "https://…/plugin.py", ok: T("Install") });
                 if (v && v.trim()) {
-                    await run(api.post("search/installPlugin", { sources: v.trim() }), "Instalando…");
+                    await run(api.post("search/installPlugin", { sources: v.trim() }), T("Installing…"));
                     setTimeout(render, 2500);
                 }
             }
         });
         page.r.upd.addEventListener("click", async () => {
-            await run(api.post("search/updatePlugins"), "Buscando actualizaciones…");
+            await run(api.post("search/updatePlugins"), T("Checking for updates…"));
             setTimeout(render, 3000);
         });
         page.r.main.innerHTML = "<div class=\"fetching\"><span class=\"spinner\"></span></div>";
@@ -2706,8 +2714,8 @@
             <div class="safe-top"></div>
             <div class="main" data-ref="main">
                 <div class="head"><h1>RSS</h1>
-                    <button class="icon-btn" data-ref="refresh" aria-label="Actualizar todo">${ic("refresh")}</button>
-                    <button class="icon-btn" data-ref="add" aria-label="Agregar fuente">${ic("plus")}</button>
+                    <button class="icon-btn" data-ref="refresh" aria-label="${T("Refresh all")}">${ic("refresh")}</button>
+                    <button class="icon-btn" data-ref="add" aria-label="${T("Add feed")}">${ic("plus")}</button>
                 </div>
                 <div data-ref="body" style="margin-top:10px"><div class="fetching"><span class="spinner"></span></div></div>
             </div>
@@ -2716,30 +2724,30 @@
         RV.refresh.addEventListener("click", async () => {
             const feeds = flatFeeds(RV.items || {});
             await Promise.all(feeds.map((f) => api.post("rss/refreshItem", { itemPath: f.path }).catch(() => {})));
-            toast("Actualizando fuentes…", "ok");
+            toast(T("Refreshing feeds…"), "ok");
             setTimeout(loadRss, 2500);
         });
         RV.add.addEventListener("click", () => menuSheet({
-            title: "Agregar",
+            title: T("Add"),
             items: [
                 {
                     icon: "rss",
-                    label: "Nueva fuente RSS…",
+                    label: T("New RSS feed…"),
                     onClick: async () => {
-                        const v = await promptSheet({ title: "Nueva fuente RSS", label: "URL de la fuente", type: "url", placeholder: "https://…/rss", ok: "Agregar" });
+                        const v = await promptSheet({ title: T("New RSS feed"), label: T("Feed URL"), type: "url", placeholder: "https://…/rss", ok: T("Add") });
                         if (v && v.trim()) {
-                            await run(api.post("rss/addFeed", { url: v.trim(), path: "" }), "Fuente agregada");
+                            await run(api.post("rss/addFeed", { url: v.trim(), path: "" }), T("Feed added"));
                             setTimeout(loadRss, 1500);
                         }
                     }
                 },
                 {
                     icon: "folder",
-                    label: "Nueva carpeta…",
+                    label: T("New folder…"),
                     onClick: async () => {
-                        const v = await promptSheet({ title: "Nueva carpeta", label: "Nombre", ok: "Crear" });
+                        const v = await promptSheet({ title: T("New folder"), label: T("Name"), ok: T("Create") });
                         if (v && v.trim()) {
-                            await run(api.post("rss/addFolder", { path: v.trim() }), "Carpeta creada");
+                            await run(api.post("rss/addFolder", { path: v.trim() }), T("Folder created"));
                             loadRss();
                         }
                     }
@@ -2754,7 +2762,7 @@
             if (e.target.closest("[data-rules]"))
                 rulesPage();
             if (e.target.closest("[data-enable]"))
-                setPrefs({ rss_processing_enabled: true }, "Lector RSS activado").then(renderRss);
+                setPrefs({ rss_processing_enabled: true }, T("RSS reader enabled")).then(renderRss);
         });
         return el;
     };
@@ -2787,18 +2795,18 @@
         const procOff = S.prefs.rss_processing_enabled === false;
         const unread = (f) => (f.feed.articles || []).filter((a) => !a.isRead).length;
         RV.body.innerHTML = `
-            ${procOff ? `<div class="group"><div class="item"><span class="ico red">${ic("info", "sm")}</span><span class="lbl">El lector RSS está desactivado<small>qBittorrent no actualizará las fuentes.</small></span><button class="sec-btn" data-enable>Activar</button></div></div>` : ""}
+            ${procOff ? `<div class="group"><div class="item"><span class="ico red">${ic("info", "sm")}</span><span class="lbl">${T("The RSS reader is disabled")}<small>${T("qBittorrent won't refresh the feeds.")}</small></span><button class="sec-btn" data-enable>${T("Enable")}</button></div></div>` : ""}
             ${list.length ? `<div class="group">${list.map((f) => f.folder
                 ? `<div class="item" style="padding-left:${14 + f.depth * 16}px"><span class="ico accent">${ic("folder", "sm")}</span><span class="lbl"><b>${esc(f.name)}</b></span></div>`
                 : `<button class="item" data-feed="${esc(f.path)}" style="padding-left:${14 + f.depth * 16}px">
                     <span class="ico ${f.feed.hasError ? "red" : "accent"}">${f.feed.isLoading ? "<span class=\"spinner\" style=\"width:14px;height:14px\"></span>" : ic("rss", "sm")}</span>
-                    <span class="lbl">${esc(f.feed.title || f.name)}<small>${esc(f.feed.hasError ? "Error al actualizar" : `${(f.feed.articles || []).length} artículos${f.feed.lastBuildDate ? ` · ${f.feed.lastBuildDate}` : ""}`)}</small></span>
+                    <span class="lbl">${esc(f.feed.title || f.name)}<small>${esc(f.feed.hasError ? T("Failed to refresh") : `${T("{0} articles", (f.feed.articles || []).length)}${f.feed.lastBuildDate ? ` · ${f.feed.lastBuildDate}` : ""}`)}</small></span>
                     ${unread(f) ? `<span class="badge">${unread(f)}</span>` : ""}
                     <span class="chev">${ic("chev", "sm")}</span>
                 </button>`).join("")}</div>`
-                : `<div class="empty">${ic("rss")}<b>Sin fuentes RSS</b><span>Agrega una fuente con el botón +.</span></div>`}
-            <div class="group-title">Automatización</div>
-            <div class="group"><button class="item" data-rules><span class="ico">${ic("sparkles", "sm")}</span><span class="lbl">Reglas de descarga automática</span><span class="chev">${ic("chev", "sm")}</span></button></div>`;
+                : `<div class="empty">${ic("rss")}<b>${T("No RSS feeds")}</b><span>${T("Add a feed with the + button.")}</span></div>`}
+            <div class="group-title">${T("Automation")}</div>
+            <div class="group"><button class="item" data-rules><span class="ico">${ic("sparkles", "sm")}</span><span class="lbl">${T("Auto-download rules")}</span><span class="chev">${ic("chev", "sm")}</span></button></div>`;
     };
 
     const feedMenu = (path) => {
@@ -2809,33 +2817,33 @@
             title: f.feed.title || f.name,
             subtitle: f.feed.url,
             items: [
-                { icon: "refresh", label: "Actualizar", onClick: async () => {
-                    await run(api.post("rss/refreshItem", { itemPath: path }), "Actualizando…");
+                { icon: "refresh", label: T("Refresh"), onClick: async () => {
+                    await run(api.post("rss/refreshItem", { itemPath: path }), T("Updating…"));
                     setTimeout(loadRss, 2000);
                 } },
-                { icon: "checkAll", label: "Marcar todo como leído", onClick: async () => {
-                    await run(api.post("rss/markAsRead", { itemPath: path }), "Marcado como leído");
+                { icon: "checkAll", label: T("Mark all as read"), onClick: async () => {
+                    await run(api.post("rss/markAsRead", { itemPath: path }), T("Marked as read"));
                     loadRss();
                 } },
-                { icon: "edit", label: "Renombrar…", onClick: async () => {
-                    const v = await promptSheet({ title: "Renombrar fuente", value: f.name });
+                { icon: "edit", label: T("Rename…"), onClick: async () => {
+                    const v = await promptSheet({ title: T("Rename feed"), value: f.name });
                     if (v && v.trim() && (v.trim() !== f.name)) {
                         const parent = path.includes("\\") ? path.slice(0, path.lastIndexOf("\\") + 1) : "";
-                        await run(api.post("rss/moveItem", { itemPath: path, destPath: parent + v.trim() }), "Renombrada");
+                        await run(api.post("rss/moveItem", { itemPath: path, destPath: parent + v.trim() }), T("Renamed§f"));
                         loadRss();
                     }
                 } },
-                { icon: "link", label: "Editar URL…", onClick: async () => {
-                    const v = await promptSheet({ title: "URL de la fuente", value: f.feed.url, type: "url" });
+                { icon: "link", label: T("Edit URL…"), onClick: async () => {
+                    const v = await promptSheet({ title: T("Feed URL"), value: f.feed.url, type: "url" });
                     if (v && v.trim() && (v.trim() !== f.feed.url)) {
-                        await run(api.post("rss/setFeedURL", { path, url: v.trim() }), "URL actualizada");
+                        await run(api.post("rss/setFeedURL", { path, url: v.trim() }), T("URL updated"));
                         loadRss();
                     }
                 } },
-                { icon: "copy", label: "Copiar URL", onClick: () => copyText(f.feed.url) },
-                { icon: "trash", label: "Eliminar fuente", danger: true, onClick: async () => {
-                    if (await confirmSheet({ title: "¿Eliminar fuente?", message: f.feed.title || f.name, ok: "Eliminar", danger: true })) {
-                        await run(api.post("rss/removeItem", { path }), "Fuente eliminada");
+                { icon: "copy", label: T("Copy URL"), onClick: () => copyText(f.feed.url) },
+                { icon: "trash", label: T("Delete feed"), danger: true, onClick: async () => {
+                    if (await confirmSheet({ title: T("Delete feed?"), message: f.feed.title || f.name, ok: T("Delete"), danger: true })) {
+                        await run(api.post("rss/removeItem", { path }), T("Feed deleted"));
                         loadRss();
                     }
                 } }
@@ -2849,18 +2857,18 @@
             return;
         const page = openPage({
             title: f.feed.title || f.name,
-            actions: `<button class="icon-btn" data-ref="read" aria-label="Marcar todo como leído">${ic("checkAll")}</button><button class="icon-btn" data-ref="menu" aria-label="Opciones">${ic("more")}</button>`
+            actions: `<button class="icon-btn" data-ref="read" aria-label="${T("Mark all as read")}">${ic("checkAll")}</button><button class="icon-btn" data-ref="menu" aria-label="${T("Options")}">${ic("more")}</button>`
         });
         const render = () => {
             f = findFeed(path) || f;
             const arts = [...(f.feed.articles || [])].sort((a, b) => (new Date(b.date) - new Date(a.date)));
             page.r.main.innerHTML = arts.length
-                ? `<div class="group">${arts.map((a) => `<div class="article ${a.isRead ? "read" : "unread"}" data-art="${esc(a.id)}"><div class="t">${esc(a.title)}</div><small>${esc(a.date ? new Date(a.date).toLocaleString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "")}${a.author ? ` · ${esc(a.author)}` : ""}</small></div>`).join("")}</div>`
-                : `<div class="empty">${ic("rss")}<b>Sin artículos</b></div>`;
+                ? `<div class="group">${arts.map((a) => `<div class="article ${a.isRead ? "read" : "unread"}" data-art="${esc(a.id)}"><div class="t">${esc(a.title)}</div><small>${esc(a.date ? new Date(a.date).toLocaleString(LOCALE, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "")}${a.author ? ` · ${esc(a.author)}` : ""}</small></div>`).join("")}</div>`
+                : `<div class="empty">${ic("rss")}<b>${T("No articles")}</b></div>`;
         };
         render();
         page.r.read.addEventListener("click", async () => {
-            await run(api.post("rss/markAsRead", { itemPath: path }), "Marcado como leído");
+            await run(api.post("rss/markAsRead", { itemPath: path }), T("Marked as read"));
             for (const a of f.feed.articles || [])
                 a.isRead = true;
             render();
@@ -2882,11 +2890,11 @@
                 const body = h(`<div>
                     ${desc ? `<div class="desc" style="white-space:pre-wrap">${esc(desc)}</div>` : ""}
                     <div class="btns" style="flex-direction:column">
-                        ${(a.torrentURL || a.link) ? `<button class="btn primary" data-dl>${ic("download", "sm")} Descargar</button>` : ""}
-                        ${a.link ? `<button class="btn" data-open>${ic("globe", "sm")} Abrir enlace</button>` : ""}
+                        ${(a.torrentURL || a.link) ? `<button class="btn primary" data-dl>${ic("download", "sm")} ${T("Download§verb")}</button>` : ""}
+                        ${a.link ? `<button class="btn" data-open>${ic("globe", "sm")} ${T("Open link")}</button>` : ""}
                     </div>
                 </div>`);
-                const sheet = openSheet({ title: a.title, subtitle: a.date ? new Date(a.date).toLocaleString("es") : "", body });
+                const sheet = openSheet({ title: a.title, subtitle: a.date ? new Date(a.date).toLocaleString(LOCALE) : "", body });
                 body.querySelector("[data-dl]")?.addEventListener("click", () => {
                     sheet.close({ handoff: true });
                     addSheet({ url: a.torrentURL || a.link });
@@ -2897,7 +2905,7 @@
     };
 
     const rulesPage = () => {
-        const page = openPage({ title: "Reglas automáticas" });
+        const page = openPage({ title: T("Automatic rules") });
         const render = async () => {
             let rules = {};
             try {
@@ -2910,15 +2918,15 @@
             page.r.main.innerHTML = `
                 ${names.length ? `<div class="group">${names.map((n) => {
                     const r = rules[n];
-                    return `<div class="item"><span class="lbl">${esc(n)}<small>${esc([r.mustContain && `Contiene: ${r.mustContain}`, r.assignedCategory && `Categoría: ${r.assignedCategory}`].filter(Boolean).join(" · ") || "Sin filtro")}</small></span><span class="switch"><input type="checkbox" data-rule="${esc(n)}" ${r.enabled ? "checked" : ""}><i></i></span></div>`;
-                }).join("")}</div>` : `<div class="empty">${ic("sparkles")}<b>No hay reglas</b></div>`}
-                <p class="note" style="margin-top:4px">Para crear o editar reglas en detalle usa la versión de escritorio (Más → Versión escritorio).</p>`;
+                    return `<div class="item"><span class="lbl">${esc(n)}<small>${esc([r.mustContain && T("Contains: {0}", r.mustContain), r.assignedCategory && T("Category: {0}", r.assignedCategory)].filter(Boolean).join(" · ") || T("No filter"))}</small></span><span class="switch"><input type="checkbox" data-rule="${esc(n)}" ${r.enabled ? "checked" : ""}><i></i></span></div>`;
+                }).join("")}</div>` : `<div class="empty">${ic("sparkles")}<b>${T("No rules")}</b></div>`}
+                <p class="note" style="margin-top:4px">${T("To create or edit rules in detail, use the desktop version (More → Desktop version).")}</p>`;
             page.r.main.onchange = async (e) => {
                 const cb = e.target.closest("[data-rule]");
                 if (!cb)
                     return;
                 const def = Object.assign({}, rules[cb.dataset.rule], { enabled: cb.checked });
-                const ok = await run(api.post("rss/setRule", { ruleName: cb.dataset.rule, ruleDef: JSON.stringify(def) }), cb.checked ? "Regla activada" : "Regla desactivada");
+                const ok = await run(api.post("rss/setRule", { ruleName: cb.dataset.rule, ruleDef: JSON.stringify(def) }), cb.checked ? T("Rule enabled") : T("Rule disabled"));
                 if (ok !== null)
                     rules[cb.dataset.rule] = def;
             };
@@ -2933,50 +2941,50 @@
     const MV = {};
     const PREF_GROUPS = [
         {
-            title: "Descargas",
+            title: T("Downloads"),
             items: [
-                { type: "text", key: "save_path", label: "Ruta predeterminada", icon: "folder" },
-                { type: "bool", key: "temp_path_enabled", label: "Ruta separada para incompletos" },
-                { type: "text", key: "temp_path", label: "Ruta de incompletos", dep: "temp_path_enabled" },
-                { type: "bool", key: "add_stopped_enabled", label: "Agregar torrents detenidos" },
-                { type: "bool", key: "auto_tmm_enabled", label: "Gestión automática por defecto" },
-                { type: "choice", key: "torrent_content_layout", label: "Disposición del contenido", options: [["Original", "Original"], ["Subfolder", "Crear subcarpeta"], ["NoSubfolder", "Sin subcarpeta"]] },
-                { type: "bool", key: "preallocate_all", label: "Reservar espacio en disco" },
-                { type: "bool", key: "incomplete_files_ext", label: "Añadir .!qB a incompletos" }
+                { type: "text", key: "save_path", label: T("Default save path"), icon: "folder" },
+                { type: "bool", key: "temp_path_enabled", label: T("Separate path for incomplete torrents") },
+                { type: "text", key: "temp_path", label: T("Incomplete path"), dep: "temp_path_enabled" },
+                { type: "bool", key: "add_stopped_enabled", label: T("Add torrents stopped") },
+                { type: "bool", key: "auto_tmm_enabled", label: T("Automatic management by default") },
+                { type: "choice", key: "torrent_content_layout", label: T("Content layout"), options: [["Original", "Original"], ["Subfolder", T("Create subfolder")], ["NoSubfolder", T("Don't create subfolder")]] },
+                { type: "bool", key: "preallocate_all", label: T("Pre-allocate disk space") },
+                { type: "bool", key: "incomplete_files_ext", label: T("Append .!qB to incomplete files") }
             ]
         },
         {
-            title: "Cola",
+            title: T("Queue"),
             items: [
-                { type: "bool", key: "queueing_enabled", label: "Usar cola de torrents" },
-                { type: "int", key: "max_active_downloads", label: "Descargas activas máx.", dep: "queueing_enabled", hint: "-1 = sin límite" },
-                { type: "int", key: "max_active_uploads", label: "Subidas activas máx.", dep: "queueing_enabled", hint: "-1 = sin límite" },
-                { type: "int", key: "max_active_torrents", label: "Torrents activos máx.", dep: "queueing_enabled", hint: "-1 = sin límite" },
-                { type: "bool", key: "dont_count_slow_torrents", label: "No contar torrents lentos", dep: "queueing_enabled" }
+                { type: "bool", key: "queueing_enabled", label: T("Use torrent queueing") },
+                { type: "int", key: "max_active_downloads", label: T("Max active downloads"), dep: "queueing_enabled", hint: T("-1 = unlimited") },
+                { type: "int", key: "max_active_uploads", label: T("Max active uploads"), dep: "queueing_enabled", hint: T("-1 = unlimited") },
+                { type: "int", key: "max_active_torrents", label: T("Max active torrents"), dep: "queueing_enabled", hint: T("-1 = unlimited") },
+                { type: "bool", key: "dont_count_slow_torrents", label: T("Don't count slow torrents"), dep: "queueing_enabled" }
             ]
         },
         {
-            title: "Siembra",
+            title: T("Seeding§group"),
             items: [
-                { type: "bool", key: "max_ratio_enabled", label: "Limitar ratio" },
-                { type: "float", key: "max_ratio", label: "Ratio máximo", dep: "max_ratio_enabled" },
-                { type: "bool", key: "max_seeding_time_enabled", label: "Limitar tiempo de siembra" },
-                { type: "int", key: "max_seeding_time", label: "Minutos de siembra", dep: "max_seeding_time_enabled", unit: "min" },
-                { type: "choice", key: "max_ratio_act", label: "Al alcanzar el límite", options: [[0, "Detener torrent"], [1, "Eliminar torrent"], [3, "Eliminar torrent y archivos"], [2, "Activar super siembra"]] }
+                { type: "bool", key: "max_ratio_enabled", label: T("Limit ratio") },
+                { type: "float", key: "max_ratio", label: T("Maximum ratio"), dep: "max_ratio_enabled" },
+                { type: "bool", key: "max_seeding_time_enabled", label: T("Limit seeding time") },
+                { type: "int", key: "max_seeding_time", label: T("Seeding minutes"), dep: "max_seeding_time_enabled", unit: "min" },
+                { type: "choice", key: "max_ratio_act", label: T("When the limit is reached"), options: [[0, T("Stop torrent")], [1, T("Remove torrent")], [3, T("Remove torrent and files")], [2, T("Enable super seeding")]] }
             ]
         },
         {
-            title: "Conexión",
+            title: T("Connection"),
             items: [
-                { type: "int", key: "listen_port", label: "Puerto de escucha" },
+                { type: "int", key: "listen_port", label: T("Listening port") },
                 { type: "bool", key: "upnp", label: "UPnP / NAT-PMP" },
-                { type: "int", key: "max_connec", label: "Conexiones globales máx.", hint: "-1 = sin límite" },
-                { type: "int", key: "max_connec_per_torrent", label: "Conexiones por torrent máx.", hint: "-1 = sin límite" },
-                { type: "bool", key: "dht", label: "DHT (red descentralizada)" },
-                { type: "bool", key: "pex", label: "Intercambio de pares (PeX)" },
-                { type: "bool", key: "lsd", label: "Descubrimiento local (LSD)" },
-                { type: "choice", key: "encryption", label: "Cifrado", options: [[0, "Permitir"], [1, "Requerir"], [2, "Desactivar"]] },
-                { type: "bool", key: "anonymous_mode", label: "Modo anónimo" }
+                { type: "int", key: "max_connec", label: T("Max global connections"), hint: T("-1 = unlimited") },
+                { type: "int", key: "max_connec_per_torrent", label: T("Max connections per torrent"), hint: T("-1 = unlimited") },
+                { type: "bool", key: "dht", label: T("DHT (decentralized network)") },
+                { type: "bool", key: "pex", label: T("Peer exchange (PeX)") },
+                { type: "bool", key: "lsd", label: T("Local peer discovery (LSD)") },
+                { type: "choice", key: "encryption", label: T("Encryption"), options: [[0, T("Allow")], [1, T("Require")], [2, T("Disable")]] },
+                { type: "bool", key: "anonymous_mode", label: T("Anonymous mode") }
             ]
         }
     ];
@@ -2985,7 +2993,7 @@
         const el = h(`<section class="view hidden" data-view="more">
             <div class="safe-top"></div>
             <div class="main" data-ref="main">
-                <div class="head"><h1>Más</h1></div>
+                <div class="head"><h1>${T("More")}</h1></div>
                 <div data-ref="body" style="margin-top:12px"></div>
             </div>
         </section>`);
@@ -2999,7 +3007,7 @@
             }
             const alt = e.target.closest("[data-alt]");
             if (alt) {
-                const ok = await run(api.post("transfer/toggleSpeedLimitsMode"), alt.checked ? "Límites alternativos activados" : "Límites alternativos desactivados");
+                const ok = await run(api.post("transfer/toggleSpeedLimitsMode"), alt.checked ? T("Alternative speed limits on") : T("Alternative speed limits off"));
                 if (ok !== null)
                     S.server.use_alt_speed_limits = alt.checked;
                 renderMore();
@@ -3027,16 +3035,16 @@
                     break;
                 case "about": aboutSheet(); break;
                 case "logout":
-                    if (await confirmSheet({ title: "¿Cerrar sesión?", ok: "Cerrar sesión" })) {
+                    if (await confirmSheet({ title: T("Log out?"), ok: T("Log out") })) {
                         await api.post("auth/logout").catch(() => {});
                         location.reload();
                     }
                     break;
                 case "shutdown":
-                    if (await confirmSheet({ title: "¿Apagar qBittorrent?", message: "Se cerrará el programa en el servidor. Tendrás que iniciarlo de nuevo manualmente.", ok: "Apagar", danger: true })) {
+                    if (await confirmSheet({ title: T("Shut down qBittorrent?"), message: T("qBittorrent will quit on the server. You'll have to start it again manually."), ok: T("Shut down"), danger: true })) {
                         await api.post("app/shutdown").catch(() => {});
                         clearTimeout(syncTimer);
-                        $("#app").innerHTML = `<div class="login"><div class="empty">${ic("power")}<b>qBittorrent se ha apagado</b></div></div>`;
+                        $("#app").innerHTML = `<div class="login"><div class="empty">${ic("power")}<b>${T("qBittorrent has been shut down")}</b></div></div>`;
                     }
                     break;
             }
@@ -3050,10 +3058,10 @@
             PREF_INDEX[it.key] = it;
     }
     Object.assign(PREF_INDEX, {
-        dl_limit: { type: "speed", key: "dl_limit", label: "Límite global de bajada" },
-        up_limit: { type: "speed", key: "up_limit", label: "Límite global de subida" },
-        alt_dl_limit: { type: "speed", key: "alt_dl_limit", label: "Bajada alternativa" },
-        alt_up_limit: { type: "speed", key: "alt_up_limit", label: "Subida alternativa" }
+        dl_limit: { type: "speed", key: "dl_limit", label: T("Global download limit") },
+        up_limit: { type: "speed", key: "up_limit", label: T("Global upload limit") },
+        alt_dl_limit: { type: "speed", key: "alt_dl_limit", label: T("Alternative download limit") },
+        alt_up_limit: { type: "speed", key: "alt_up_limit", label: T("Alternative upload limit") }
     });
 
     const prefValueText = (it) => {
@@ -3063,8 +3071,8 @@
         switch (it.type) {
             case "speed": return fmtLimit(v);
             case "choice": return (it.options.find(([k]) => k === v) || [, String(v)])[1];
-            case "int": return (v < 0) ? "Sin límite" : `${v}${it.unit ? ` ${it.unit}` : ""}`;
-            case "float": return (v < 0) ? "Sin límite" : nf(v, 2);
+            case "int": return (v < 0) ? T("No limit") : `${v}${it.unit ? ` ${it.unit}` : ""}`;
+            case "float": return (v < 0) ? T("No limit") : nf(v, 2);
             default: return String(v);
         }
     };
@@ -3081,7 +3089,7 @@
                 return;
         }
         else if (it.type === "speed") {
-            const s = await promptSheet({ title: it.label, label: "KiB/s (0 = sin límite)", value: String(Math.round((cur || 0) / 1024)), type: "number", inputmode: "numeric" });
+            const s = await promptSheet({ title: it.label, label: T("KiB/s (0 = unlimited)"), value: String(Math.round((cur || 0) / 1024)), type: "number", inputmode: "numeric" });
             if (s === null)
                 return;
             v = Math.round(Math.max(0, Number(s) || 0) * 1024);
@@ -3092,7 +3100,7 @@
                 return;
             v = (it.type === "int") ? Math.round(Number(s)) : Number(s);
             if (Number.isNaN(v))
-                return toast("Número no válido", "err");
+                return toast(T("Invalid number"), "err");
         }
         else {
             const s = await promptSheet({ title: it.label, value: String(cur ?? "") });
@@ -3110,7 +3118,7 @@
             return;
         const s = S.server;
         const p = S.prefs;
-        const conn = { connected: ["Conectado", "green"], firewalled: ["Tras cortafuegos", "red"], disconnected: ["Desconectado", "red"] }[s.connection_status] || ["—", ""];
+        const conn = { connected: [T("Connected"), "green"], firewalled: [T("Firewalled"), "red"], disconnected: [T("Disconnected"), "red"] }[s.connection_status] || ["—", ""];
         const prefRow = (it) => {
             if (it.dep && !p[it.dep])
                 return "";
@@ -3121,61 +3129,61 @@
         const sc = MV.main.scrollTop;
         MV.body.innerHTML = `
             <div class="stats">
-                <div class="stat"><small>Bajada · sesión</small><b>${fmtBytes(s.dl_info_data)}</b></div>
-                <div class="stat"><small>Subida · sesión</small><b>${fmtBytes(s.up_info_data)}</b></div>
-                <div class="stat"><small>Bajada · total</small><b>${fmtBytes(s.alltime_dl)}</b></div>
-                <div class="stat"><small>Subida · total</small><b>${fmtBytes(s.alltime_ul)}</b></div>
-                <div class="stat"><small>Ratio global</small><b>${esc(s.global_ratio ?? "—")}</b></div>
-                <div class="stat"><small>Espacio libre</small><b>${fmtBytes(s.free_space_on_disk)}</b></div>
-                <div class="stat"><small>Pares conectados</small><b>${s.total_peer_connections ?? "—"}</b></div>
-                <div class="stat"><small>Nodos DHT</small><b>${s.dht_nodes ?? "—"}</b></div>
+                <div class="stat"><small>${T("Download · session")}</small><b>${fmtBytes(s.dl_info_data)}</b></div>
+                <div class="stat"><small>${T("Upload · session")}</small><b>${fmtBytes(s.up_info_data)}</b></div>
+                <div class="stat"><small>${T("Download · total")}</small><b>${fmtBytes(s.alltime_dl)}</b></div>
+                <div class="stat"><small>${T("Upload · total")}</small><b>${fmtBytes(s.alltime_ul)}</b></div>
+                <div class="stat"><small>${T("Global ratio")}</small><b>${esc(s.global_ratio ?? "—")}</b></div>
+                <div class="stat"><small>${T("Free space")}</small><b>${fmtBytes(s.free_space_on_disk)}</b></div>
+                <div class="stat"><small>${T("Connected peers")}</small><b>${s.total_peer_connections ?? "—"}</b></div>
+                <div class="stat"><small>${T("DHT nodes")}</small><b>${s.dht_nodes ?? "—"}</b></div>
             </div>
-            <div class="group"><div class="item"><span class="ico ${conn[1]}">${ic((s.connection_status === "disconnected") ? "wifiOff" : "wifi", "sm")}</span><span class="lbl">Estado de la conexión<small>${esc(s.last_external_address_v4 || s.last_external_address_v6 || "")}</small></span><span class="val">${esc(conn[0])}</span></div></div>
+            <div class="group"><div class="item"><span class="ico ${conn[1]}">${ic((s.connection_status === "disconnected") ? "wifiOff" : "wifi", "sm")}</span><span class="lbl">${T("Connection status")}<small>${esc(s.last_external_address_v4 || s.last_external_address_v6 || "")}</small></span><span class="val">${esc(conn[0])}</span></div></div>
 
-            <div class="group-title">Velocidad</div>
+            <div class="group-title">${T("Speed")}</div>
             <div class="group">
-                <label class="item"><span class="ico">${ic("snail", "sm")}</span><span class="lbl">Límites alternativos<small>Bajada ${esc(fmtLimit(p.alt_dl_limit))} · Subida ${esc(fmtLimit(p.alt_up_limit))}</small></span><span class="switch"><input type="checkbox" data-alt ${s.use_alt_speed_limits ? "checked" : ""}><i></i></span></label>
+                <label class="item"><span class="ico">${ic("snail", "sm")}</span><span class="lbl">${T("Alternative limits")}<small>${T("Download {0} · Upload {1}", esc(fmtLimit(p.alt_dl_limit)), esc(fmtLimit(p.alt_up_limit)))}</small></span><span class="switch"><input type="checkbox" data-alt ${s.use_alt_speed_limits ? "checked" : ""}><i></i></span></label>
                 ${prefRow(PREF_INDEX.dl_limit)}
                 ${prefRow(PREF_INDEX.up_limit)}
                 ${prefRow(PREF_INDEX.alt_dl_limit)}
                 ${prefRow(PREF_INDEX.alt_up_limit)}
-                <label class="item"><span class="lbl">Programar límites alternativos<small>El horario se configura en la versión escritorio</small></span><span class="switch"><input type="checkbox" data-pref="scheduler_enabled" ${p.scheduler_enabled ? "checked" : ""}><i></i></span></label>
+                <label class="item"><span class="lbl">${T("Schedule alternative limits")}<small>${T("The schedule is set in the desktop version")}</small></span><span class="switch"><input type="checkbox" data-pref="scheduler_enabled" ${p.scheduler_enabled ? "checked" : ""}><i></i></span></label>
             </div>
 
             ${PREF_GROUPS.map((g) => `<div class="group-title">${esc(g.title)}</div><div class="group">${g.items.map(prefRow).join("")}</div>`).join("")}
 
-            <div class="group-title">Organizar</div>
+            <div class="group-title">${T("Organize")}</div>
             <div class="group">
-                <button class="item" data-go="categories"><span class="ico accent">${ic("folder", "sm")}</span><span class="lbl">Categorías</span><span class="val">${Object.keys(S.categories).length}</span><span class="chev">${ic("chev", "sm")}</span></button>
-                <button class="item" data-go="tags"><span class="ico accent">${ic("tag", "sm")}</span><span class="lbl">Etiquetas</span><span class="val">${S.tags.length}</span><span class="chev">${ic("chev", "sm")}</span></button>
+                <button class="item" data-go="categories"><span class="ico accent">${ic("folder", "sm")}</span><span class="lbl">${T("Categories")}</span><span class="val">${Object.keys(S.categories).length}</span><span class="chev">${ic("chev", "sm")}</span></button>
+                <button class="item" data-go="tags"><span class="ico accent">${ic("tag", "sm")}</span><span class="lbl">${T("Tags")}</span><span class="val">${S.tags.length}</span><span class="chev">${ic("chev", "sm")}</span></button>
             </div>
 
-            <div class="group-title">Herramientas</div>
+            <div class="group-title">${T("Tools")}</div>
             <div class="group">
-                <button class="item" data-go="log"><span class="ico">${ic("doc", "sm")}</span><span class="lbl">Registro de ejecución</span><span class="chev">${ic("chev", "sm")}</span></button>
-                <button class="item" data-go="desktop"><span class="ico blue">${ic("monitor", "sm")}</span><span class="lbl">Versión escritorio<small>Todas las opciones avanzadas de qBittorrent</small></span><span class="chev">${ic("chev", "sm")}</span></button>
-                <button class="item" data-go="about"><span class="ico">${ic("info", "sm")}</span><span class="lbl">Acerca de</span><span class="val">${esc(S.version)}</span></button>
+                <button class="item" data-go="log"><span class="ico">${ic("doc", "sm")}</span><span class="lbl">${T("Execution log")}</span><span class="chev">${ic("chev", "sm")}</span></button>
+                <button class="item" data-go="desktop"><span class="ico blue">${ic("monitor", "sm")}</span><span class="lbl">${T("Desktop version")}<small>${T("All of qBittorrent's advanced options")}</small></span><span class="chev">${ic("chev", "sm")}</span></button>
+                <button class="item" data-go="about"><span class="ico">${ic("info", "sm")}</span><span class="lbl">${T("About")}</span><span class="val">${esc(S.version)}</span></button>
             </div>
 
-            <div class="group-title">Sesión</div>
+            <div class="group-title">${T("Session")}</div>
             <div class="group">
-                <button class="item" data-go="logout"><span class="ico">${ic("logout", "sm")}</span><span class="lbl">Cerrar sesión</span></button>
-                <button class="item danger" data-go="shutdown"><span class="ico red">${ic("power", "sm")}</span><span class="lbl">Apagar qBittorrent</span></button>
+                <button class="item" data-go="logout"><span class="ico">${ic("logout", "sm")}</span><span class="lbl">${T("Log out")}</span></button>
+                <button class="item danger" data-go="shutdown"><span class="ico red">${ic("power", "sm")}</span><span class="lbl">${T("Shut down qBittorrent")}</span></button>
             </div>`;
         MV.main.scrollTop = sc;
     };
 
     const categoriesPage = () => {
-        const page = openPage({ title: "Categorías", actions: `<button class="icon-btn" data-ref="add" aria-label="Nueva categoría">${ic("plus")}</button>` });
+        const page = openPage({ title: T("Categories"), actions: `<button class="icon-btn" data-ref="add" aria-label="${T("New category")}">${ic("plus")}</button>` });
         const render = () => {
             const names = Object.keys(S.categories).sort(collator.compare);
             const counts = {};
             for (const t of S.torrents.values())
                 counts[t.category] = (counts[t.category] || 0) + 1;
             page.r.main.innerHTML = names.length
-                ? `<div class="group">${names.map((n) => `<button class="item" data-cat="${esc(n)}"><span class="ico accent">${ic("folder", "sm")}</span><span class="lbl">${esc(n)}<small class="mono">${esc(S.categories[n].savePath || "Ruta predeterminada")}</small></span><span class="val">${counts[n] || 0}</span></button>`).join("")}</div>
-                   <button class="sec-btn" data-unused>${ic("trash", "sm")}Eliminar categorías sin usar</button>`
-                : `<div class="empty">${ic("folder")}<b>No hay categorías</b><span>Las categorías te ayudan a ordenar y decidir dónde se guarda cada descarga.</span></div>`;
+                ? `<div class="group">${names.map((n) => `<button class="item" data-cat="${esc(n)}"><span class="ico accent">${ic("folder", "sm")}</span><span class="lbl">${esc(n)}<small class="mono">${esc(S.categories[n].savePath || T("Default save path"))}</small></span><span class="val">${counts[n] || 0}</span></button>`).join("")}</div>
+                   <button class="sec-btn" data-unused>${ic("trash", "sm")}${T("Remove unused categories")}</button>`
+                : `<div class="empty">${ic("folder")}<b>${T("No categories")}</b><span>${T("Categories help you organize and decide where each download is saved.")}</span></div>`;
         };
         render();
         const unsub = onSync(() => {
@@ -3193,9 +3201,9 @@
                 const used = new Set([...S.torrents.values()].map((t) => t.category));
                 const unused = Object.keys(S.categories).filter((c) => !used.has(c));
                 if (!unused.length)
-                    return toast("Todas las categorías están en uso");
-                if (await confirmSheet({ title: `¿Eliminar ${unused.length} categorías sin usar?`, message: unused.join(", "), ok: "Eliminar", danger: true })) {
-                    await run(api.post("torrents/removeCategories", { categories: unused.join("\n") }), "Categorías eliminadas");
+                    return toast(T("All categories are in use"));
+                if (await confirmSheet({ title: T("Remove {0} unused categories?", unused.length), message: unused.join(", "), ok: T("Delete"), danger: true })) {
+                    await run(api.post("torrents/removeCategories", { categories: unused.join("\n") }), T("Categories removed"));
                     for (const c of unused)
                         delete S.categories[c];
                     render();
@@ -3208,28 +3216,28 @@
             const n = b.dataset.cat;
             menuSheet({
                 title: n,
-                subtitle: S.categories[n]?.savePath || "Ruta predeterminada",
+                subtitle: S.categories[n]?.savePath || T("Default save path"),
                 items: [
-                    { icon: "filter", label: "Ver sus torrents", onClick: () => {
+                    { icon: "filter", label: T("Show its torrents"), onClick: () => {
                         S.filter.category = n;
                         saveFilter();
                         page.close();
                         switchTab("torrents");
                     } },
-                    { icon: "edit", label: "Editar ruta…", onClick: async () => {
+                    { icon: "edit", label: T("Edit path…"), onClick: async () => {
                         if (await categoryEditor(n))
                             render();
                     } },
-                    { icon: "plus", label: "Nueva subcategoría…", hidden: !S.prefs.use_subcategories, onClick: async () => {
-                        const v = await promptSheet({ title: "Nueva subcategoría", label: `Dentro de "${n}"`, ok: "Crear" });
+                    { icon: "plus", label: T("New subcategory…"), hidden: !S.prefs.use_subcategories, onClick: async () => {
+                        const v = await promptSheet({ title: T("New subcategory"), label: T("Inside “{0}”", n), ok: T("Create") });
                         if (v && v.trim()) {
-                            await run(api.post("torrents/createCategory", { category: `${n}/${v.trim()}`, savePath: "" }), "Subcategoría creada");
+                            await run(api.post("torrents/createCategory", { category: `${n}/${v.trim()}`, savePath: "" }), T("Subcategory created"));
                             render();
                         }
                     } },
-                    { icon: "trash", label: "Eliminar categoría", danger: true, onClick: async () => {
-                        if (await confirmSheet({ title: "¿Eliminar categoría?", message: `${n}. Los torrents quedarán sin categoría.`, ok: "Eliminar", danger: true })) {
-                            await run(api.post("torrents/removeCategories", { categories: n }), "Categoría eliminada");
+                    { icon: "trash", label: T("Remove category"), danger: true, onClick: async () => {
+                        if (await confirmSheet({ title: T("Remove category?"), message: T("{0}. Its torrents will be left without a category.", n), ok: T("Delete"), danger: true })) {
+                            await run(api.post("torrents/removeCategories", { categories: n }), T("Category removed"));
                             delete S.categories[n];
                             render();
                         }
@@ -3240,7 +3248,7 @@
     };
 
     const tagsPage = () => {
-        const page = openPage({ title: "Etiquetas", actions: `<button class="icon-btn" data-ref="add" aria-label="Nueva etiqueta">${ic("plus")}</button>` });
+        const page = openPage({ title: T("Tags"), actions: `<button class="icon-btn" data-ref="add" aria-label="${T("New tag")}">${ic("plus")}</button>` });
         const render = () => {
             const counts = {};
             for (const t of S.torrents.values()) {
@@ -3250,15 +3258,15 @@
             const tags = [...S.tags].sort(collator.compare);
             page.r.main.innerHTML = tags.length
                 ? `<div class="group">${tags.map((tg) => `<button class="item" data-tag="${esc(tg)}"><span class="ico accent">${ic("tag", "sm")}</span><span class="lbl">${esc(tg)}</span><span class="val">${counts[tg] || 0}</span></button>`).join("")}</div>
-                   <button class="sec-btn" data-unused>${ic("trash", "sm")}Eliminar etiquetas sin usar</button>`
-                : `<div class="empty">${ic("tag")}<b>No hay etiquetas</b></div>`;
+                   <button class="sec-btn" data-unused>${ic("trash", "sm")}${T("Remove unused tags")}</button>`
+                : `<div class="empty">${ic("tag")}<b>${T("No tags")}</b></div>`;
             page.counts = counts;
         };
         render();
         page.r.add.addEventListener("click", async () => {
-            const v = await promptSheet({ title: "Nueva etiqueta", label: "Nombre (separa varias con comas)", ok: "Crear" });
+            const v = await promptSheet({ title: T("New tag"), label: T("Name (separate several with commas)"), ok: T("Create") });
             if (v && v.trim()) {
-                await run(api.post("torrents/createTags", { tags: v.trim() }), "Etiqueta creada");
+                await run(api.post("torrents/createTags", { tags: v.trim() }), T("Tag created"));
                 for (const tg of v.split(",").map((x) => x.trim()).filter(Boolean)) {
                     if (!S.tags.includes(tg))
                         S.tags.push(tg);
@@ -3270,9 +3278,9 @@
             if (e.target.closest("[data-unused]")) {
                 const unused = S.tags.filter((tg) => !page.counts[tg]);
                 if (!unused.length)
-                    return toast("Todas las etiquetas están en uso");
-                if (await confirmSheet({ title: `¿Eliminar ${unused.length} etiquetas sin usar?`, message: unused.join(", "), ok: "Eliminar", danger: true })) {
-                    await run(api.post("torrents/deleteTags", { tags: unused.join(",") }), "Etiquetas eliminadas");
+                    return toast(T("All tags are in use"));
+                if (await confirmSheet({ title: T("Remove {0} unused tags?", unused.length), message: unused.join(", "), ok: T("Delete"), danger: true })) {
+                    await run(api.post("torrents/deleteTags", { tags: unused.join(",") }), T("Tags removed"));
                     S.tags = S.tags.filter((x) => !unused.includes(x));
                     render();
                 }
@@ -3285,15 +3293,15 @@
             menuSheet({
                 title: tg,
                 items: [
-                    { icon: "filter", label: "Ver sus torrents", onClick: () => {
+                    { icon: "filter", label: T("Show its torrents"), onClick: () => {
                         S.filter.tag = tg;
                         saveFilter();
                         page.close();
                         switchTab("torrents");
                     } },
-                    { icon: "trash", label: "Eliminar etiqueta", danger: true, onClick: async () => {
-                        if (await confirmSheet({ title: "¿Eliminar etiqueta?", message: tg, ok: "Eliminar", danger: true })) {
-                            await run(api.post("torrents/deleteTags", { tags: tg }), "Etiqueta eliminada");
+                    { icon: "trash", label: T("Remove tag"), danger: true, onClick: async () => {
+                        if (await confirmSheet({ title: T("Remove tag?"), message: tg, ok: T("Delete"), danger: true })) {
+                            await run(api.post("torrents/deleteTags", { tags: tg }), T("Tag removed"));
                             S.tags = S.tags.filter((x) => x !== tg);
                             render();
                         }
@@ -3308,11 +3316,11 @@
         let lines = [];
         let lastId = -1;
         let timer = null;
-        const page = openPage({ title: "Registro", onClose: () => clearTimeout(timer) });
+        const page = openPage({ title: T("Log"), onClose: () => clearTimeout(timer) });
         page.r.main.innerHTML = `<div class="chips" data-chips style="margin-top:0"></div><div class="group" data-lines style="margin-top:10px"></div>`;
         const chips = page.r.main.querySelector("[data-chips]");
         const box = page.r.main.querySelector("[data-lines]");
-        const TYPES = [["normal", "Normal", 1], ["info", "Información", 2], ["warning", "Advertencias", 4], ["critical", "Críticos", 8]];
+        const TYPES = [["normal", "Normal", 1], ["info", T("Information"), 2], ["warning", T("Warnings"), 4], ["critical", T("Critical"), 8]];
         const renderChips = () => {
             chips.innerHTML = TYPES.map(([k, l]) => `<button class="chip ${types[k] ? "soft" : ""}" data-k="${k}">${types[k] ? ic("check", "xs") : ""}${l}</button>`).join("");
         };
@@ -3329,8 +3337,8 @@
             const mask = TYPES.filter(([k]) => types[k]).reduce((a, [, , bit]) => a | bit, 0);
             const vis = lines.filter((l) => l.type & mask).slice(-400).reverse();
             box.innerHTML = vis.length
-                ? vis.map((l) => `<div class="logline ${(l.type === 8) ? "crit" : ((l.type === 4) ? "warn" : ((l.type === 2) ? "info" : ""))}"><small>${new Date(l.timestamp * 1000).toLocaleString("es")}</small>${esc(l.message)}</div>`).join("")
-                : "<div class=\"item\"><span class=\"lbl\" style=\"color:var(--text-faint)\">Sin mensajes</span></div>";
+                ? vis.map((l) => `<div class="logline ${(l.type === 8) ? "crit" : ((l.type === 4) ? "warn" : ((l.type === 2) ? "info" : ""))}"><small>${new Date(l.timestamp * 1000).toLocaleString(LOCALE)}</small>${esc(l.message)}</div>`).join("")
+                : "<div class=\"item\"><span class=\"lbl\" style=\"color:var(--text-faint)\">" + T("No messages") + "</span></div>";
         };
         const load = async () => {
             try {
@@ -3363,15 +3371,15 @@
         catch {}
         openSheet({
             title: "qBittorrent",
-            subtitle: "Interfaz móvil Penumbra",
+            subtitle: T("Penumbra mobile interface"),
             body: `<div class="group">
-                <div class="item"><span class="lbl">Versión</span><span class="val">${esc(S.version)}</span></div>
-                <div class="item"><span class="lbl">API web</span><span class="val">${esc(webapi)}</span></div>
+                <div class="item"><span class="lbl">${T("Version")}</span><span class="val">${esc(S.version)}</span></div>
+                <div class="item"><span class="lbl">${T("Web API")}</span><span class="val">${esc(webapi)}</span></div>
                 ${build.qt ? `<div class="item"><span class="lbl">Qt</span><span class="val">${esc(build.qt)}</span></div>` : ""}
                 ${build.libtorrent ? `<div class="item"><span class="lbl">libtorrent</span><span class="val">${esc(build.libtorrent)}</span></div>` : ""}
                 ${build.boost ? `<div class="item"><span class="lbl">Boost</span><span class="val">${esc(build.boost)}</span></div>` : ""}
                 ${build.openssl ? `<div class="item"><span class="lbl">OpenSSL</span><span class="val">${esc(build.openssl)}</span></div>` : ""}
-                ${build.platform ? `<div class="item"><span class="lbl">Plataforma</span><span class="val">${esc(`${build.platform} ${build.bitness || ""}`)}</span></div>` : ""}
+                ${build.platform ? `<div class="item"><span class="lbl">${T("Platform")}</span><span class="val">${esc(`${build.platform} ${build.bitness || ""}`)}</span></div>` : ""}
             </div>`
         });
     };
@@ -3386,10 +3394,10 @@
             <form>
                 <img class="logo" src="images/qbittorrent-tray.svg" alt="">
                 <h1>qBittorrent</h1>
-                <p>Inicia sesión para continuar</p>
-                <div class="field"><label for="u">Usuario</label><input id="u" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" required></div>
-                <div class="field"><label for="pw">Contraseña</label><input id="pw" type="password" autocomplete="current-password" required></div>
-                <button class="btn primary" style="margin-top:8px">Iniciar sesión</button>
+                <p>${T("Sign in to continue")}</p>
+                <div class="field"><label for="u">${T("Username")}</label><input id="u" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" required></div>
+                <div class="field"><label for="pw">${T("Password")}</label><input id="pw" type="password" autocomplete="current-password" required></div>
+                <button class="btn primary" style="margin-top:8px">${T("Sign in")}</button>
                 <div class="err">${esc(msg)}</div>
             </form>
         </div>`);
@@ -3408,10 +3416,10 @@
                     location.reload();
                     return;
                 }
-                err.textContent = (r.status === 403) ? "Demasiados intentos fallidos. Tu IP está bloqueada temporalmente." : "Usuario o contraseña incorrectos.";
+                err.textContent = (r.status === 403) ? T("Too many failed attempts. Your IP is temporarily banned.") : T("Invalid username or password.");
             }
             catch {
-                err.textContent = "No se pudo contactar con qBittorrent.";
+                err.textContent = T("Could not reach qBittorrent.");
             }
             btn.disabled = false;
             $("#pw").value = "";
@@ -3420,13 +3428,13 @@
     };
     onForbidden = () => {
         if (!$(".login"))
-            showLogin("Tu sesión expiró. Vuelve a iniciar sesión.");
+            showLogin(T("Your session expired. Please sign in again."));
     };
 
     // =====================================================================
     // Arranque y navegación por pestañas
     // =====================================================================
-    const TABS = [["torrents", "Torrents", "transfer"], ["search", "Buscar", "search"], ["rss", "RSS", "rss"], ["more", "Más", "settings"]];
+    const TABS = [["torrents", "Torrents", "transfer"], ["search", T("Search"), "search"], ["rss", "RSS", "rss"], ["more", T("More"), "settings"]];
     let views = {};
     const switchTab = (tab) => {
         if (S.selecting)
@@ -3507,7 +3515,7 @@
             startApp();
         }
         catch {
-            $("#app").innerHTML = `<div class="login"><div class="empty">${ic("wifiOff")}<b>No se puede conectar con qBittorrent</b><span>Reintentando…</span></div></div>`;
+            $("#app").innerHTML = `<div class="login"><div class="empty">${ic("wifiOff")}<b>${T("Can't connect to qBittorrent")}</b><span>${T("Retrying…")}</span></div></div>`;
             setTimeout(boot, 3000);
         }
     };

@@ -23,6 +23,13 @@
     if ((uiPref === "mobile") || ((uiPref !== "desktop") && isPhone))
         window.location.replace("mobile.html");
 
+    // Texto del acceso a la interfaz móvil en el menú Ver (lo agrega build.sh en inglés)
+    document.addEventListener("DOMContentLoaded", () => {
+        const label = document.getElementById("mobileUiLabel");
+        if (label && document.documentElement.lang.startsWith("es"))
+            label.textContent = "Interfaz móvil";
+    });
+
     // Al volver a la interfaz móvil desde el menú, olvidar la preferencia "escritorio"
     document.addEventListener("click", (e) => {
         if (e.target.closest && e.target.closest("#mobileUiLink")) {

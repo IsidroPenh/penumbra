@@ -5,9 +5,9 @@
 </p>
 
 <p align="center">
-  <img src="capturas/escritorio.png" alt="Penumbra on desktop" width="68%">
+  <img src="screenshots/desktop.png" alt="Penumbra on desktop" width="68%">
   &nbsp;
-  <img src="capturas/movil-lista.png" alt="Penumbra on a phone" width="22%">
+  <img src="screenshots/mobile-list.png" alt="Penumbra on a phone" width="22%">
 </p>
 
 Penumbra is an alternative WebUI for [qBittorrent](https://www.qbittorrent.org/) with two interfaces:
@@ -17,17 +17,18 @@ Penumbra is an alternative WebUI for [qBittorrent](https://www.qbittorrent.org/)
   so every feature keeps working.
 - 📱 **Mobile:** phones automatically get a **dedicated touch-first app** with cards, gestures, bottom sheets
   and a bottom navigation bar. It can be **installed to the home screen** and works like a regular app (PWA).
-- 🌐 **Language:** the desktop UI uses qBittorrent's official translations, so it shows up in your language.
-  The mobile UI is currently in Spanish.
+- 🌐 **Language:** both interfaces follow the language set in qBittorrent. The desktop UI uses qBittorrent's
+  official translations; the mobile UI is available in English and Spanish (other languages fall back to English).
+  Translations are welcome in [`overlay/public/m/i18n.js`](overlay/public/m/i18n.js).
 - 🪶 **No dependencies:** plain HTML, CSS and JavaScript, using the same API as the official WebUI.
 
 ## Screenshots
 
 | List | Details | Files | Multi-select | Add | More |
 |:-:|:-:|:-:|:-:|:-:|:-:|
-| <img src="capturas/movil-lista.png" width="140"> | <img src="capturas/movil-detalle.png" width="140"> | <img src="capturas/movil-archivos.png" width="140"> | <img src="capturas/movil-seleccion.png" width="140"> | <img src="capturas/movil-agregar.png" width="140"> | <img src="capturas/movil-mas.png" width="140"> |
+| <img src="screenshots/mobile-list.png" width="140"> | <img src="screenshots/mobile-details.png" width="140"> | <img src="screenshots/mobile-files.png" width="140"> | <img src="screenshots/mobile-select.png" width="140"> | <img src="screenshots/mobile-add.png" width="140"> | <img src="screenshots/mobile-more.png" width="140"> |
 
-<p align="center"><img src="capturas/login.png" alt="Login screen" width="60%"></p>
+<p align="center"><img src="screenshots/login.png" alt="Login screen" width="60%"></p>
 
 ## Installation
 
@@ -66,8 +67,8 @@ If the WebUI doesn't load at all, quit qBittorrent and set `WebUI\AlternativeUIE
 - **▶ / ⏸** on each card starts or stops it instantly.
 - **+** adds magnet links, URLs or `.torrent` files.
 - The **snail** icon toggles the alternative speed limits. Tap the speeds to change the global limits.
-- **Más → Versión escritorio** (More → Desktop version) opens the full WebUI from your phone. On desktop,
-  **View → Interfaz móvil** (Mobile interface) takes you back to the mobile app.
+- **More → Desktop version** opens the full WebUI from your phone. On desktop, **View → Mobile interface**
+  takes you back to the mobile app.
 - `mobile.html?add=magnet:?xt=...` opens the add form with the link already filled in.
 
 ## Other qBittorrent versions
@@ -94,7 +95,7 @@ overlay/                    the theme files (the only thing you need to edit)
   private/scripts/theme.js    automatic redirect to the mobile UI
   public/css/theme-login.css  login screen
   public/mobile.html          mobile UI
-  public/m/                   app.js, app.css, icons and manifest (installable)
+  public/m/                   app.js, app.css, i18n.js (translations), icons and manifest (installable)
 ```
 
 ## License

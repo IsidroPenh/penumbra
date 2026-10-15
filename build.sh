@@ -70,7 +70,7 @@ done
 # Main window: mobile redirect script + browser bar color + link to the mobile UI
 INDEX="$DIST/private/index.html"
 sed -i 's#<meta name="viewport"[^>]*>#&\n    <meta name="theme-color" content="\#0b0d12">\n    <script src="scripts/theme.js?v=${CACHEID}"></script>#' "$INDEX"
-sed -i 's#\(<li class="divider"><a id="StatisticsLink">.*</li>\)#\1\n                            <li class="divider"><a id="mobileUiLink" href="mobile.html"><img class="MyMenuIcon" src="images/penumbra-phone.svg" alt="" width="16" height="16">Interfaz móvil</a></li>#' "$INDEX"
+sed -i 's#\(<li class="divider"><a id="StatisticsLink">.*</li>\)#\1\n                            <li class="divider"><a id="mobileUiLink" href="mobile.html"><img class="MyMenuIcon" src="images/penumbra-phone.svg" alt="" width="16" height="16"><span id="mobileUiLabel">Mobile interface</span></a></li>#' "$INDEX"
 
 # Login
 LOGIN="$DIST/public/index.html"
@@ -83,9 +83,9 @@ grep -q 'root.classList.add("dark");' "$CS" || echo "!! Could not patch color-sc
 
 # Content-based version: any theme change forces the browser to fetch the new files
 # (qBittorrent lets browsers cache CSS/JS for 12 hours, and ${CACHEID} only changes on restart)
-VER="$(cat "$HERE"/overlay/public/m/app.* "$HERE"/overlay/public/css/*.css "$HERE"/overlay/private/css/*.css "$HERE"/overlay/private/scripts/*.js | sha1sum | cut -c1-10)"
+VER="$(cat "$HERE"/overlay/public/m/*.js "$HERE"/overlay/public/m/*.css "$HERE"/overlay/public/css/*.css "$HERE"/overlay/private/css/*.css "$HERE"/overlay/private/scripts/*.js | sha1sum | cut -c1-10)"
 for f in "$DIST"/private/*.html "$DIST"/public/*.html; do
-    sed -i -E 's#((theme|theme-login|app)\.(css|js))\?v=\$\{CACHEID\}#\1?v='"$VER"'#g' "$f"
+    sed -i -E 's#((theme|theme-login|app|i18n)\.(css|js))\?v=\$\{CACHEID\}#\1?v='"$VER"'#g' "$f"
 done
 
 # qBittorrent rejects symlinks inside an alternative WebUI
