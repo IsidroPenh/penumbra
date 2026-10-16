@@ -387,6 +387,14 @@
         }
     };
     const tagsOf = (t) => (t.tags ? t.tags.split(",").map((x) => x.trim()).filter(Boolean) : []);
+    // Every whitespace-separated word of the query must appear somewhere in the text (any order).
+    const termsMatcher = (q) => {
+        const terms = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+        return (text) => {
+            const s = String(text).toLowerCase();
+            return terms.every((x) => s.includes(x));
+        };
+    };
 
     let trackerHostMap = new Map(); // host -> Set(hash)
     const rebuildTrackerHosts = () => {
@@ -433,10 +441,7 @@
             }
         }
         if (S.q) {
-            const q = S.q.toLowerCase();
-            const terms = q.split(/\s+/).filter(Boolean);
-            const name = String(t.name).toLowerCase();
-            if (!terms.every((x) => name.includes(x)))
+            if (!termsMatcher(S.q)(t.name))
                 return false;
         }
         return true;
@@ -2171,7 +2176,8 @@
             const q = (R.body.querySelector("[data-fq]")?.value || "").trim().toLowerCase();
             let rows;
             if (q) {
-                rows = files.filter((f) => f.name.toLowerCase().includes(q)).map((f) => ({ key: `f:${f.index}`, dir: false, file: f, depth: 0 }));
+                const match = termsMatcher(q);
+                rows = files.filter((f) => match(f.name)).map((f) => ({ key: `f:${f.index}`, dir: false, file: f, depth: 0 }));
             }
             else {
                 const tree = buildTree(files);
@@ -2637,8 +2643,10 @@
         const fq = SV.fq.value.trim().toLowerCase();
         const key = SV.sort.value;
         let list = SV.results.map((r, i) => Object.assign({ i }, r));
-        if (fq)
-            list = list.filter((r) => r.fileName.toLowerCase().includes(fq));
+        if (fq) {
+            const match = termsMatcher(fq);
+            list = list.filter((r) => match(r.fileName));
+        }
         list.sort((a, b) => ((key === "fileName") ? collator.compare(a.fileName, b.fileName) : ((b[key] || 0) - (a[key] || 0))));
         list = list.slice(0, 400);
         if (!list.length) {
