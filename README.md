@@ -32,6 +32,9 @@ Penumbra is an alternative WebUI for [qBittorrent](https://www.qbittorrent.org/)
 
 ## Installation
 
+> **Requires qBittorrent 5.0 or newer.** The mobile app uses the 5.x WebUI API (`torrents/start`/`stop`
+> and the `stopped*` torrent states), so it does not work with qBittorrent 4.x.
+
 1. Download the `.zip` from the latest [**release**](../../releases). The file name says which qBittorrent
    version it was built for, for example `qbt5.1.4`.
 2. Extract it on the machine that runs qBittorrent. You get a `penumbra/` folder.
@@ -73,8 +76,8 @@ If the WebUI doesn't load at all, quit qBittorrent and set `WebUI\AlternativeUIE
 
 ## Other qBittorrent versions
 
-Each `.zip` bundles the official WebUI of one specific qBittorrent version. If you run a different version,
-build it yourself:
+Each `.zip` bundles the official WebUI of one specific qBittorrent version. If you run a different 5.x
+version, build it yourself (4.x is not supported):
 
 ```bash
 git clone https://github.com/IsidroPenh/penumbra.git

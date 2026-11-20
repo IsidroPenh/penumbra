@@ -21,6 +21,14 @@ if [[ -z "$VERSION" ]]; then
     done
 fi
 [[ -z "$VERSION" ]] && { echo "Could not detect the qBittorrent version. Pass it as an argument: ./build.sh 5.1.4" >&2; exit 1; }
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Invalid version \"$VERSION\". Use the form X.Y.Z, for example: ./build.sh 5.1.4" >&2
+    exit 1
+fi
+if (( ${VERSION%%.*} < 5 )); then
+    echo "qBittorrent $VERSION is not supported: Penumbra requires qBittorrent 5.0 or newer." >&2
+    exit 1
+fi
 echo ">> qBittorrent $VERSION"
 
 CACHE="$HERE/.cache"
