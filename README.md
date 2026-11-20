@@ -59,7 +59,7 @@ services:
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     environment:
-      - DOCKER_MODS=ghcr.io/isidropenh/penumbra:latest
+      - DOCKER_MODS=ghcr.io/axel-de-block/penumbra:latest
       # - PENUMBRA_AUTOENABLE=false   # install it, but don't switch the WebUI to it
     volumes:
       - ./config:/config
@@ -107,7 +107,7 @@ Each `.zip` bundles the official WebUI of one specific qBittorrent version. If y
 version, build it yourself (4.x is not supported):
 
 ```bash
-git clone https://github.com/IsidroPenh/penumbra.git
+git clone https://github.com/axel-de-block/penumbra.git
 cd penumbra
 ./build.sh 5.1.4        # with no argument it detects the qbittorrent-nox version
 ```

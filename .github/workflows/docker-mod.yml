@@ -33,5 +33,6 @@ jobs:
           TAGS=(-t "$IMAGE:latest")
           [[ "$GITHUB_REF_TYPE" == "tag" ]] && TAGS+=(-t "$IMAGE:$GITHUB_REF_NAME")
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker build --provenance=false --sbom=false "${TAGS[@]}" docker-mod
+          docker build --provenance=false --sbom=false "${TAGS[@]}" \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" docker-mod
           docker push --all-tags "$IMAGE"
