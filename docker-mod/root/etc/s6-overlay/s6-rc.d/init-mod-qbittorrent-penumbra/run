@@ -1,0 +1,101 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+
+# Penumbra Docker Mod for linuxserver/qbittorrent.
+# Copies the Penumbra build that matches this container's qBittorrent version to
+# /config/penumbra and enables it as the alternative WebUI.
+#
+# The build lives in /config (not in the mod's own folder) on purpose: qBittorrent has no
+# fallback when the alternative WebUI folder is missing, so removing the mod must not
+# leave it pointing at a folder that no longer exists.
+
+SRC_ROOT=/penumbra
+DEST=/config/penumbra
+CONF=/config/qBittorrent/qBittorrent.conf
+
+log() {
+    echo "[mod-penumbra] $*"
+}
+
+# --- Pick the build for this qBittorrent version --------------------------------
+# Exact match first, then the newest build of the same minor version, then the newest build.
+# "--version" fully starts qBittorrent (profile, settings migration), so run it against a
+# throwaway profile: running it on /config would migrate and re-own the real settings.
+PROBE=$(mktemp -d)
+QBT_VERSION=$(HOME=${PROBE} XDG_CONFIG_HOME=${PROBE} XDG_DATA_HOME=${PROBE} XDG_CACHE_HOME=${PROBE} \
+    timeout 30 /app/qbittorrent-nox --profile="${PROBE}" --confirm-legal-notice --version </dev/null 2>/dev/null \
+    | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+rm -rf "${PROBE}"
+BUILDS=$(find "${SRC_ROOT}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -V)
+if [[ -z ${BUILDS} ]]; then
+    log "No Penumbra builds found in ${SRC_ROOT}, skipping."
+    exit 0
+fi
+if [[ -n ${QBT_VERSION} && -d ${SRC_ROOT}/${QBT_VERSION} ]]; then
+    BUILD=${QBT_VERSION}
+elif [[ -n ${QBT_VERSION} ]] && BUILD=$(awk -F. -v m="${QBT_VERSION%.*}" '($1 "." $2) == m' <<< "${BUILDS}" | tail -n1) && [[ -n ${BUILD} ]]; then
+    log "Using the Penumbra build for qBittorrent ${BUILD} (closest to ${QBT_VERSION})."
+else
+    BUILD=$(tail -n1 <<< "${BUILDS}")
+    log "No build for qBittorrent ${QBT_VERSION:-(unknown version)}, using the newest one (${BUILD}). Some features may not work."
+fi
+SRC=${SRC_ROOT}/${BUILD}
+
+# --- Install it to /config/penumbra ----------------------------------------------
+if [[ -e ${DEST} && ! -f ${DEST}/.build ]]; then
+    log "${DEST} exists but was not created by this mod, leaving it alone."
+    exit 0
+fi
+if ! cmp -s "${SRC}/.build" "${DEST}/.build"; then
+    log "Installing Penumbra for qBittorrent ${BUILD} to ${DEST}"
+    rm -rf "${DEST}.new"
+    cp -R "${SRC}" "${DEST}.new"
+    rm -rf "${DEST}"
+    mv "${DEST}.new" "${DEST}"
+    if [[ -z ${LSIO_NON_ROOT_USER} ]]; then
+        lsiown -R abc:abc "${DEST}"
+    fi
+fi
+
+# --- Enable it as the alternative WebUI --------------------------------------------
+if [[ ${PENUMBRA_AUTOENABLE,,} == "false" ]]; then
+    log "PENUMBRA_AUTOENABLE=false: not touching qBittorrent.conf. Set the alternative WebUI to ${DEST} yourself."
+    exit 0
+fi
+if [[ ! -f ${CONF} ]]; then
+    log "${CONF} not found, skipping. Set the alternative WebUI to ${DEST} yourself."
+    exit 0
+fi
+
+# ini OP SECTION KEY [VALUE]: OP "set" replaces or adds KEY=VALUE in [SECTION], "del" removes KEY.
+# Works on ${TMP}; ENVIRON (unlike awk -v) keeps the backslashes in keys intact.
+ini() {
+    OP=$1 SEC=$2 KEY=$3 VAL=${4:-} awk '
+        BEGIN { op = ENVIRON["OP"]; sec = "[" ENVIRON["SEC"] "]"; k = ENVIRON["KEY"]; v = ENVIRON["VAL"] }
+        function put() { if ((op == "set") && !done) print k "=" v; done = 1 }
+        /^\[/ { if (insec && (op == "set")) put(); insec = ($0 == sec); if (insec) seen = 1 }
+        insec && (index($0, k "=") == 1) { put(); next }
+        { print }
+        END { if ((op == "set") && !done) { if (!seen) { print ""; print sec }; print k "=" v } }
+    ' "${TMP}" > "${TMP}.new" && mv "${TMP}.new" "${TMP}"
+}
+
+TMP=$(mktemp)
+cp "${CONF}" "${TMP}"
+# qBittorrent 5.3 moved the WebUI settings from [Preferences] WebUI\... to [WebUI]
+if [[ $(printf '%s\n' "${QBT_VERSION:-${BUILD}}" 5.3.0 | sort -V | head -n1) == "5.3.0" ]]; then
+    ini set WebUI AlternativeUIEnabled true
+    ini set WebUI RootFolder "${DEST}"
+    # A not yet migrated config would otherwise overwrite these on first start
+    ini del Preferences 'WebUI\AlternativeUIEnabled'
+    ini del Preferences 'WebUI\RootFolder'
+else
+    ini set Preferences 'WebUI\AlternativeUIEnabled' true
+    ini set Preferences 'WebUI\RootFolder' "${DEST}"
+fi
+if [[ -s ${TMP} ]] && ! cmp -s "${CONF}" "${TMP}"; then
+    # Rewrite in place so the file keeps its owner and permissions
+    cat "${TMP}" > "${CONF}"
+    log "Enabled Penumbra as the alternative WebUI (${DEST})."
+fi
+rm -f "${TMP}"
