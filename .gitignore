@@ -2,6 +2,7 @@
 /dist/
 /.cache/
 /.venv/
+/docker-mod/root/penumbra/
 *.zip
 
 # Logs qBittorrent leaves behind with Windows-style paths

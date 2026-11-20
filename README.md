@@ -32,6 +32,9 @@ Penumbra is an alternative WebUI for [qBittorrent](https://www.qbittorrent.org/)
 
 ## Installation
 
+> **Requires qBittorrent 5.0 or newer.** The mobile app uses the 5.x WebUI API (`torrents/start`/`stop`
+> and the `stopped*` torrent states), so it does not work with qBittorrent 4.x.
+
 1. Download the `.zip` from the latest [**release**](../../releases). The file name says which qBittorrent
    version it was built for, for example `qbt5.1.4`.
 2. Extract it on the machine that runs qBittorrent. You get a `penumbra/` folder.
@@ -46,6 +49,31 @@ curl -s http://127.0.0.1:8080/api/v2/app/setPreferences \
   --data-urlencode 'json={"alternative_webui_enabled":true,"alternative_webui_path":"/path/to/penumbra"}'
 ```
 
+### Docker (linuxserver.io)
+
+If you run the [linuxserver/qbittorrent](https://docs.linuxserver.io/images/docker-qbittorrent/) image,
+add Penumbra as a [Docker Mod](https://github.com/linuxserver/docker-mods) instead:
+
+```yaml
+services:
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    environment:
+      - DOCKER_MODS=ghcr.io/axel-de-block/penumbra:latest
+      # - PENUMBRA_AUTOENABLE=false   # install it, but don't switch the WebUI to it
+    volumes:
+      - ./config:/config
+```
+
+On every start the mod copies the build that matches the container's qBittorrent version to
+`/config/penumbra` and enables it as the alternative WebUI. It ships builds for the newest patch of each
+5.x minor version and picks the closest one if there is no exact match. To combine it with other mods,
+separate them with `|`.
+
+Because the files live in `/config`, removing the mod keeps Penumbra working (it just stops being
+updated). To go back to the original WebUI, remove the mod or set `PENUMBRA_AUTOENABLE=false` (otherwise
+the mod turns Penumbra back on at the next start), then turn the alternative WebUI off as described below.
+
 ### Going back to the original WebUI
 
 Uncheck the option in **Tools → Options → Web UI**, or run:
@@ -55,8 +83,10 @@ curl -s http://127.0.0.1:8080/api/v2/app/setPreferences \
   --data-urlencode 'json={"alternative_webui_enabled":false}'
 ```
 
-If the WebUI doesn't load at all, quit qBittorrent and set `WebUI\AlternativeUIEnabled=false` in
-`qBittorrent.conf` (on Linux it lives in `~/.config/qBittorrent/`).
+If the WebUI doesn't load at all, quit qBittorrent and turn it off in `qBittorrent.conf` (on Linux it lives
+in `~/.config/qBittorrent/`, in Docker in `/config/qBittorrent/`): set `AlternativeUIEnabled=false` in the
+`[WebUI]` section on qBittorrent 5.3 or newer, or `WebUI\AlternativeUIEnabled=false` in `[Preferences]` on
+older versions. With the Docker Mod, also set `PENUMBRA_AUTOENABLE=false`, or remove the mod.
 
 ## Using it on your phone
 
@@ -73,11 +103,11 @@ If the WebUI doesn't load at all, quit qBittorrent and set `WebUI\AlternativeUIE
 
 ## Other qBittorrent versions
 
-Each `.zip` bundles the official WebUI of one specific qBittorrent version. If you run a different version,
-build it yourself:
+Each `.zip` bundles the official WebUI of one specific qBittorrent version. If you run a different 5.x
+version, build it yourself (4.x is not supported):
 
 ```bash
-git clone https://github.com/IsidroPenh/penumbra.git
+git clone https://github.com/axel-de-block/penumbra.git
 cd penumbra
 ./build.sh 5.1.4        # with no argument it detects the qbittorrent-nox version
 ```
@@ -90,6 +120,8 @@ to install it with `pip` into a `.venv`.
 
 ```
 build.sh                    downloads the official WebUI, compiles translations and applies the theme
+build-mod.sh                builds one Penumbra per qBittorrent 5.x minor version for the Docker Mod
+docker-mod/                 the linuxserver.io Docker Mod (Dockerfile + startup script)
 overlay/                    the theme files (the only thing you need to edit)
   private/css/theme.css       desktop dark theme
   private/scripts/theme.js    automatic redirect to the mobile UI

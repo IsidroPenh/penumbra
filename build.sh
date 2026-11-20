@@ -21,6 +21,14 @@ if [[ -z "$VERSION" ]]; then
     done
 fi
 [[ -z "$VERSION" ]] && { echo "Could not detect the qBittorrent version. Pass it as an argument: ./build.sh 5.1.4" >&2; exit 1; }
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Invalid version \"$VERSION\". Use the form X.Y.Z, for example: ./build.sh 5.1.4" >&2
+    exit 1
+fi
+if (( ${VERSION%%.*} < 5 )); then
+    echo "qBittorrent $VERSION is not supported: Penumbra requires qBittorrent 5.0 or newer." >&2
+    exit 1
+fi
 echo ">> qBittorrent $VERSION"
 
 CACHE="$HERE/.cache"
@@ -77,9 +85,12 @@ LOGIN="$DIST/public/index.html"
 sed -i 's#</head>#    <link rel="stylesheet" type="text/css" href="css/theme-login.css?v=${CACHEID}">\n    <meta name="theme-color" content="\#0b0d12">\n</head>#' "$LOGIN"
 
 # The theme is dark-only: force the "dark" class regardless of the browser preference
+# (color-scheme.js only exists from 5.1; theme.js adds the class on older versions too)
 CS="$DIST/private/scripts/color-scheme.js"
-sed -i 's#root.classList.toggle("dark", .*#root.classList.add("dark");#' "$CS"
-grep -q 'root.classList.add("dark");' "$CS" || echo "!! Could not patch color-scheme.js (it changed in this version)" >&2
+if [[ -f "$CS" ]]; then
+    sed -i 's#root.classList.toggle("dark", .*#root.classList.add("dark");#' "$CS"
+    grep -q 'root.classList.add("dark");' "$CS" || echo "!! Could not patch color-scheme.js (it changed in this version)" >&2
+fi
 
 # Content-based version: any theme change forces the browser to fetch the new files
 # (qBittorrent lets browsers cache CSS/JS for 12 hours, and ${CACHEID} only changes on restart)

@@ -1,0 +1,38 @@
+name: Docker Mod
+
+# Publishes the linuxserver.io Docker Mod to ghcr.io/<owner>/penumbra.
+# Runs on every release tag, weekly (to pick up new qBittorrent releases) and manually.
+on:
+  push:
+    tags: ["v*"]
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  mod:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install lrelease
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qt6-l10n-tools
+
+      - name: Build every qBittorrent 5.x version
+        run: ./build-mod.sh
+
+      - name: Build and push
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/penumbra"
+          TAGS=(-t "$IMAGE:latest")
+          [[ "$GITHUB_REF_TYPE" == "tag" ]] && TAGS+=(-t "$IMAGE:$GITHUB_REF_NAME")
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker build --provenance=false --sbom=false "${TAGS[@]}" \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" docker-mod
+          docker push --all-tags "$IMAGE"

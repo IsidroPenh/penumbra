@@ -1,0 +1,2 @@
+*.sh text eol=lf
+docker-mod/root/** text eol=lf
