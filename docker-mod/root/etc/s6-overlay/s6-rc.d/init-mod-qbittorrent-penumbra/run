@@ -5,9 +5,9 @@
 # Copies the Penumbra build that matches this container's qBittorrent version to
 # /config/penumbra and enables it as the alternative WebUI.
 #
-# The build lives in /config (not in the mod's own folder) on purpose: qBittorrent has no
-# fallback when the alternative WebUI folder is missing, so removing the mod must not
-# leave it pointing at a folder that no longer exists.
+# The build lives in /config (not in the mod's own folder) on purpose: if the mod is removed,
+# the folder qBittorrent points at still exists, so Penumbra keeps working instead of
+# qbittorrent-nox switching the alternative WebUI off when it can't find index.html.
 
 SRC_ROOT=/penumbra
 DEST=/config/penumbra
@@ -19,13 +19,26 @@ log() {
 
 # --- Pick the build for this qBittorrent version --------------------------------
 # Exact match first, then the newest build of the same minor version, then the newest build.
-# "--version" fully starts qBittorrent (profile, settings migration), so run it against a
-# throwaway profile: running it on /config would migrate and re-own the real settings.
-PROBE=$(mktemp -d)
-QBT_VERSION=$(HOME=${PROBE} XDG_CONFIG_HOME=${PROBE} XDG_DATA_HOME=${PROBE} XDG_CACHE_HOME=${PROBE} \
-    timeout 30 /app/qbittorrent-nox --profile="${PROBE}" --confirm-legal-notice --version </dev/null 2>/dev/null \
-    | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
-rm -rf "${PROBE}"
+# The image ships qbittorrent-nox in /app from 5.2 on, and as an Alpine package
+# (/usr/bin) up to 5.1.x.
+QBT_BIN=/app/qbittorrent-nox
+[[ -x ${QBT_BIN} ]] || QBT_BIN=$(command -v qbittorrent-nox)
+QBT_VERSION=""
+if [[ -n ${QBT_BIN} ]]; then
+    # On 5.3 "--version" fully starts qBittorrent (profile, settings migration), so point every
+    # config/data location at a throwaway folder: on /config it would migrate and re-own the real
+    # settings. No --profile flag: up to 5.1.x "--version" must be the only argument.
+    PROBE=$(mktemp -d)
+    QBT_VERSION=$(HOME=${PROBE} XDG_CONFIG_HOME=${PROBE} XDG_DATA_HOME=${PROBE} XDG_CACHE_HOME=${PROBE} \
+        timeout 30 "${QBT_BIN}" --version </dev/null 2>/dev/null \
+        | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+    rm -rf "${PROBE}"
+fi
+if [[ -z ${QBT_VERSION} ]]; then
+    # Fallback: the image's own version label, e.g. "5.1.4-r3-ls453" or "libtorrentv1-5.3.0_v1.2.20-ls143"
+    QBT_VERSION=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' /build_version 2>/dev/null | head -n1)
+    [[ -n ${QBT_VERSION} ]] && log "Could not run qbittorrent-nox --version, using the image version (${QBT_VERSION})."
+fi
 BUILDS=$(find "${SRC_ROOT}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -V)
 if [[ -z ${BUILDS} ]]; then
     log "No Penumbra builds found in ${SRC_ROOT}, skipping."
