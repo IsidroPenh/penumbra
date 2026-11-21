@@ -570,10 +570,27 @@ ul.filterList .selectedFilter > span.link {
     color: #c7beff;
 }
 
-.dynamicTable td,
+/*
+ * Cell heights must match the original ones exactly: from qBittorrent 5.3 (5.2 opt-in) tables
+ * are virtual lists whose rows have a fixed height set by the WebUI (22 px torrents / 26 px
+ * others, less in compact density). Taller cells spill under the next row and the selection
+ * highlight no longer lines up with the text. So keep the original 18 px line height and
+ * vertical padding (the original compact rules still apply), only widen the horizontal padding,
+ * and draw the row separator as a shadow, which takes no space.
+ */
+.dynamicTable td {
+    box-shadow: inset 0 -1px 0 rgb(38 44 57 / 55%);
+    line-height: 18px;
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
 #transferList .dynamicTable td {
-    border-bottom: 1px solid rgb(38 44 57 / 55%);
-    padding: 5px 6px;
+    padding: 2px 6px;
+}
+
+:root.compact .dynamicTable td {
+    line-height: 14px;
 }
 
 .altRowColors tbody tr:nth-child(odd of :not(.invisible)) {
