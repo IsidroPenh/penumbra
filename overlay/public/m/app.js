@@ -1414,7 +1414,8 @@
                 kickSync();
             }
             catch (err) {
-                toast(err.message || T("Could not add"), "err");
+                // 5.2+ reject with 409 Conflict instead of "Fails."
+                toast((err.status === 409) ? T("qBittorrent rejected the torrent (already added, or invalid link?)") : (err.message || T("Could not add")), "err");
                 r.submit.disabled = false;
             }
         });
@@ -3420,7 +3421,9 @@
             try {
                 const r = await fetch("api/v2/auth/login", { method: "POST", body: new URLSearchParams({ username: $("#u").value, password: $("#pw").value }) });
                 const txt = await r.text();
-                if (r.ok && (txt.trim() === "Ok.")) {
+                // 5.0/5.1 answer 200 "Ok." or 200 "Fails."; 5.2+ answer 2xx with an empty body
+                // on success and 401 on bad credentials. A ban is 403 on every version.
+                if (r.ok && (txt.trim() !== "Fails.")) {
                     location.reload();
                     return;
                 }
